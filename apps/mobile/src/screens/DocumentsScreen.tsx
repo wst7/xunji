@@ -14,13 +14,13 @@ import { useFocusEffect, useRouter } from 'expo-router'
 import type { DocumentSummary, ParseStatus } from '@xunji/shared'
 import { errorMessage, STATUS_TEXT } from '@xunji/shared'
 
-import { api } from '../api/client'
 import { AppTabBar } from '../components/AppTabBar'
 import { DocumentCard } from '../components/DocumentCard'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Notice } from '../components/ui/Notice'
 import { Screen } from '../components/ui/Screen'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
+import * as repo from '../local/repo'
 import { useToast } from '../providers/ToastProvider'
 import { colors, radius, shadow, spacing, type } from '../theme'
 
@@ -51,11 +51,10 @@ export function DocumentsScreen() {
       else setLoadingMore(true)
 
       try {
-        const res = await api.listDocuments({
+        const res = await repo.listDocuments({
           page: nextPage,
-          page_size: PAGE_SIZE,
+          pageSize: PAGE_SIZE,
           keyword,
-          sort: 'saved_at_desc',
         })
         if (seq !== requestSeq.current) return
         setItems((current) => (mode === 'replace' ? res.items : [...current, ...res.items]))

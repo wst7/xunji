@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons'
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,21 +12,20 @@ import {
 } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
 import type { DocumentSummary, ParseStatus, SearchResult } from '@xunji/shared'
-import { ApiError, errorMessage, STATUS_TEXT } from '@xunji/shared'
+import { errorMessage, STATUS_TEXT } from '@xunji/shared'
 
-import { api } from '../api/client'
-import { savePendingShare } from '../auth/pendingShare'
 import { AppTabBar } from '../components/AppTabBar'
 import { DocumentCard, SearchResultCard } from '../components/DocumentCard'
 import { HomeOnboarding } from '../components/HomeOnboarding'
-import { OutboxBanner } from '../components/OutboxBanner'
 import { SaveField } from '../components/SaveField'
 import { SearchField } from '../components/SearchField'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Notice } from '../components/ui/Notice'
 import { Screen } from '../components/ui/Screen'
+import { processPendingQueue } from '../local/pipeline'
+import * as repo from '../local/repo'
+import { useLocalRevision } from '../local/useLocalRevision'
 import { useToast } from '../providers/ToastProvider'
-import { useOutbox } from '../providers/OutboxProvider'
 import { colors, spacing, type } from '../theme'
 
 const RECENT_COUNT = 6
@@ -49,7 +48,7 @@ function terminalToastContent(status: ParseStatus): {
 export function HomeScreen() {
   const router = useRouter()
   const { toast } = useToast()
-  const { pendingCount, flushing, retry, enqueue } = useOutbox()
+  const revision = useLocalRevision()
 
   const [results, setResults] = useState<SearchResult[] | null>(null)
   const [searching, setSearching] = useState(false)
@@ -57,14 +56,11 @@ export function HomeScreen() {
   const [recent, setRecent] = useState<DocumentSummary[] | null>(null)
   const [recentError, setRecentError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [lastQuery, setLastQuery] = useState('')
 
   const loadRecent = useCallback(async () => {
     try {
-      const res = await api.listDocuments({
-        page: 1,
-        page_size: RECENT_COUNT,
-        sort: 'saved_at_desc',
-      })
+      const res = await repo.listDocuments({ page: 1, pageSize: RECENT_COUNT })
       setRecent(res.items)
       setRecentError(null)
     } catch (e) {
@@ -73,15 +69,39 @@ export function HomeScreen() {
     }
   }, [])
 
+  // 本地写入（保存、解析完成、删除）都会推进 revision，列表随之重读。
   useFocusEffect(
     useCallback(() => {
       void loadRecent()
-      retry()
-    }, [loadRecent, retry]),
+      void processPendingQueue()
+    }, [loadRecent]),
   )
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadRecent()
+    }, [loadRecent, revision]),
+  )
+
+  // 搜索结果也跟随本地数据变化（例如刚保存的那篇解析完成）。
+  useEffect(() => {
+    if (results === null || !lastQuery) return
+    let cancelled = false
+    void repo
+      .searchDocuments(lastQuery)
+      .then((next) => {
+        if (!cancelled) setResults(next)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [revision, lastQuery])
 
   async function handleRefresh() {
     setRefreshing(true)
+    await processPendingQueue()
     await loadRecent()
     setRefreshing(false)
   }
@@ -89,9 +109,9 @@ export function HomeScreen() {
   async function handleSearch(query: string) {
     setSearching(true)
     setSearchError(null)
+    setLastQuery(query)
     try {
-      const res = await api.search(query)
-      setResults(res.results)
+      setResults(await repo.searchDocuments(query))
     } catch (e) {
       setResults(null)
       setSearchError(errorMessage(e, '搜索暂时不可用，请稍后重试。'))
@@ -102,7 +122,7 @@ export function HomeScreen() {
 
   async function handleSave(url: string): Promise<boolean> {
     try {
-      const res = await api.createDocument(url)
+      const res = await repo.createDocument(url)
       if (res.duplicate) {
         toast('这篇内容已经保存过了。', {
           action: {
@@ -111,29 +131,17 @@ export function HomeScreen() {
           },
         })
       } else {
-        toast('已保存，正在整理内容……', { type: 'success' })
+        toast('已保存，正在本机整理内容……', { type: 'success' })
+        void processPendingQueue()
       }
       await loadRecent()
       return true
     } catch (e) {
-      if (e instanceof ApiError && e.code === 'NETWORK_ERROR') {
-        const queued = await enqueue(url, 'manual')
-        toast(
-          queued === 'duplicate'
-            ? '这条链接已经在待保存队列里了。'
-            : queued === 'trimmed'
-              ? '已加入待保存；队列已满，最早的一条被移出。'
-              : '已加入待保存，联网后自动提交。',
-          { type: 'warning' },
-        )
-        return true
+      if (e instanceof Error && e.message === 'INVALID_URL') {
+        toast('这不是一个可以保存的链接。', { type: 'error' })
+      } else {
+        toast(errorMessage(e, '保存失败，请稍后重试。'), { type: 'error' })
       }
-      if (e instanceof ApiError && e.code === 'UNAUTHORIZED') {
-        await savePendingShare(url)
-        toast('登录已过期，重新登录后会自动保存这条链接。', { type: 'warning' })
-        return true
-      }
-      toast(errorMessage(e, '保存失败，请稍后重试。'), { type: 'error' })
       return false
     }
   }
@@ -185,7 +193,6 @@ export function HomeScreen() {
           <View style={styles.fields}>
             <SearchField onSubmit={(query) => void handleSearch(query)} loading={searching} />
             <SaveField onSave={handleSave} />
-            <OutboxBanner count={pendingCount} flushing={flushing} onRetry={retry} />
           </View>
 
           {searchError && <Notice text={searchError} tone="error" />}

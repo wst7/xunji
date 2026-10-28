@@ -1,13 +1,12 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { Ionicons } from '@expo/vector-icons'
-import { StyleSheet, Text, View } from 'react-native'
-import { Stack, useRouter, useSegments } from 'expo-router'
+import { AppState, StyleSheet, Text, View } from 'react-native'
+import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 
-import { AuthProvider, useAuth } from '../src/auth/AuthProvider'
-import { takePendingShare } from '../src/auth/pendingShare'
-import { OutboxProvider } from '../src/providers/OutboxProvider'
+import { getDb } from '../src/local/db'
+import { processPendingQueue } from '../src/local/pipeline'
 import { ToastProvider } from '../src/providers/ToastProvider'
 import { ShareIntentBridge } from '../src/share/ShareIntentBridge'
 import { colors, type } from '../src/theme'
@@ -17,48 +16,35 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StatusBar style="dark" />
       <ToastProvider>
-        <AuthProvider>
-          <OutboxProvider>
-            <RootNavigator />
-          </OutboxProvider>
-        </AuthProvider>
+        <RootNavigator />
       </ToastProvider>
     </SafeAreaProvider>
   )
 }
 
 function RootNavigator() {
-  const { status } = useAuth()
-  const router = useRouter()
-  const segments = useSegments()
-  const inAuth = segments[0] === 'login' || segments[0] === 'register'
+  const [ready, setReady] = useState(false)
 
-  // 未登录时只允许停留在登录/注册页；待保存队列不因 401 清空。
+  // 打开本地库后继续处理上次没整理完的收藏；回到前台时再扫一遍。
   useEffect(() => {
-    if (status === 'unauthenticated' && !inAuth) {
-      router.replace('/login')
-    }
-  }, [status, inAuth, router])
-
-  // 登录完成（或已登录冷启动）后：优先消费未登录时留下的分享链接。
-  const inAuthRef = useRef(inAuth)
-  inAuthRef.current = inAuth
-  useEffect(() => {
-    if (status !== 'authenticated') return
     let cancelled = false
     void (async () => {
-      const pending = await takePendingShare()
-      if (cancelled) return
-      if (pending) {
-        router.replace({ pathname: '/share', params: { url: pending } })
-      } else if (inAuthRef.current) {
-        router.replace('/')
+      try {
+        await getDb()
+      } finally {
+        if (!cancelled) setReady(true)
       }
+      void processPendingQueue()
     })()
+
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void processPendingQueue()
+    })
     return () => {
       cancelled = true
+      sub.remove()
     }
-  }, [status, router])
+  }, [])
 
   return (
     <View style={styles.root}>
@@ -69,7 +55,7 @@ function RootNavigator() {
         }}
       />
       <ShareIntentBridge />
-      {status === 'booting' || (status === 'unauthenticated' && !inAuth) ? (
+      {!ready && (
         <View style={styles.splash}>
           <View style={styles.mark}>
             <Ionicons name="bookmark" size={30} color={colors.surface} />
@@ -77,7 +63,7 @@ function RootNavigator() {
           <Text style={styles.brand}>寻迹 · Xunji</Text>
           <Text style={styles.tagline}>Save anything. Find it by memory.</Text>
         </View>
-      ) : null}
+      )}
     </View>
   )
 }

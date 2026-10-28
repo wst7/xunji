@@ -17,7 +17,7 @@ const config: ExpoConfig = {
     supportsTablet: false,
     bundleIdentifier: 'com.xunji.app',
     infoPlist: {
-      NSLocalNetworkUsageDescription: '寻迹需要访问局域网内的服务器，以保存和找回你的收藏。',
+      NSLocalNetworkUsageDescription: '寻迹会直接读取你保存的链接，也可能连接你自己配置的大模型服务。',
       ...(isProduction
         ? {}
         : {

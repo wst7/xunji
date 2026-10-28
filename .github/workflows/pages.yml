@@ -1,0 +1,58 @@
+name: Landing Page
+
+# 说明页部署到 GitHub Pages（项目站点：https://<owner>.github.io/<repo>/）。
+# 只有 apps/landing 会发布；应用本身（apps/web）暂停部署，不在这里出现。
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/landing/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同一时间只跑一个部署，新的提交取消旧的。
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # 说明页里的应用入口指向安装包，而不是已暂停的网页应用。
+      # 站点地址必须写成项目站点的绝对地址，og:image 需要绝对 URL。
+      - name: Build landing
+        run: npm run build -w @xunji/landing
+        env:
+          XUNJI_APP_URL: https://github.com/wst7/xunji/releases/latest
+          XUNJI_SITE_URL: https://wst7.github.io/xunji
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/landing/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

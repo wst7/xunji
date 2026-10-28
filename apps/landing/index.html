@@ -6,7 +6,7 @@
     <title>寻迹 · Xunji — 存下任何链接，凭记忆找回</title>
     <meta
       name="description"
-      content="寻迹 (Xunji) 是个人链接收藏与智能找回工具：粘贴链接自动抓取正文、生成摘要与索引，之后用一句自然语言描述就能从自己的收藏里找回原文。免费，也可自己部署。"
+      content="寻迹 (Xunji) 是个人链接收藏与智能找回工具：粘贴链接自动抓取正文、生成摘要与索引，之后用一句自然语言描述就能从自己的收藏里找回原文。免费，数据只保存在你自己的手机上。"
     />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <meta name="theme-color" content="#f8f4ea" />
@@ -28,8 +28,8 @@
   </head>
   <body>
     <header class="bar">
-      <a class="brand" href="/">寻迹 · Xunji</a>
-      <a class="btn" href="__APP_URL__">打开应用</a>
+      <a class="brand" href="./">寻迹 · Xunji</a>
+      <a class="btn" href="__APP_URL__">下载 App</a>
     </header>
 
     <main>
@@ -38,15 +38,15 @@
           <p class="tagline">Save anything. Find it by memory.</p>
           <h1>你不需要记住收藏了什么，<br />只需要记住你想找什么。</h1>
           <p class="lede">
-            看到有价值的内容，把链接交给寻迹。它在后台抓取正文、写摘要、建索引；几个月后你只要描述还记得的内容，就能把它找回来——不用分类，不用打标签。
+            看到有价值的内容，把链接交给寻迹。它在手机上抓取正文、写摘要、建立索引；几个月后你只要描述还记得的内容，就能把它找回来——不用分类，不用打标签。
           </p>
           <p class="cta">
-            <a class="btn btn-primary btn-lg" href="__APP_URL__/register">免费开始使用</a>
+            <a class="btn btn-primary btn-lg" href="__APP_URL__">下载 Android App</a>
           </p>
           <ul class="assurances">
-            <li>注册只需要邮箱和密码</li>
-            <li>只搜你自己保存的内容</li>
-            <li>免费使用，也可以自己部署</li>
+            <li>不用注册，打开就能用</li>
+            <li>收藏只存在你的手机上</li>
+            <li>可以接入你自己的大模型</li>
           </ul>
         </div>
 
@@ -76,7 +76,7 @@
           <li>
             <div>
               <strong>整理</strong>
-              <span>后台异步解析正文、生成摘要与关键词、建立全文与语义索引，页面上能看到处理状态。</span>
+              <span>在手机上解析正文、生成摘要与关键词、建立本地索引，页面上能看到处理状态。</span>
             </div>
           </li>
           <li>
@@ -142,10 +142,10 @@
       <section>
         <h2>边界与隐私</h2>
         <ul>
-          <li>只搜你自己的账号下的收藏，不同用户之间互相看不到。</li>
+          <li>所有收藏保存在你的手机本地，默认不上传任何服务器。</li>
           <li>解析失败也保留原始链接，可随时打开原文或重新解析。</li>
           <li>不绕过登录、付费墙或任何访问限制，不执行网页里的脚本与指令。</li>
-          <li>删除收藏会同时清理它的索引与后台任务，之后搜索不会再出现。</li>
+          <li>删除收藏会同时删除本地的正文与索引，之后搜索不会再出现。</li>
         </ul>
       </section>
 
@@ -153,15 +153,15 @@
         <h2>存下第一个链接</h2>
         <p>粘贴任意文章链接，几秒后它就会被整理好。之后想找它，只需要一句描述。</p>
         <p class="cta">
-          <a class="btn btn-primary btn-lg" href="__APP_URL__/register">免费开始使用</a>
+          <a class="btn btn-primary btn-lg" href="__APP_URL__">下载 Android App</a>
         </p>
-        <p class="closing-note">已经有账号？<a href="__APP_URL__/login">直接登录</a></p>
+        <p class="closing-note">数据保存在本机，不需要注册；多端同步在计划中。</p>
       </section>
     </main>
 
     <footer class="site-footer">
       <span>寻迹 · Xunji · Save anything. Find it by memory.</span>
-      <a class="btn" href="__APP_URL__">打开应用</a>
+      <a class="btn" href="__APP_URL__">下载 App</a>
     </footer>
   </body>
 </html>

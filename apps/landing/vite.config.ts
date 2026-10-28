@@ -16,6 +16,8 @@ const siteUrl = (process.env.XUNJI_SITE_URL || 'http://localhost:5174').replace(
 const runtimeUrls = process.env.XUNJI_RUNTIME_URLS === '1'
 
 export default defineConfig({
+  // 相对基址：GitHub Pages 的项目站点挂在 /<repo>/ 下，写死 '/' 会让样式和截图 404。
+  base: './',
   server: { port: 5174 },
   preview: { port: 5174 },
   plugins: [

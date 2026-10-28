@@ -3,12 +3,13 @@ import { AppState } from 'react-native'
 import type { ParseStatus } from '@xunji/shared'
 import { isTerminalStatus } from '@xunji/shared'
 
-import { api } from '../api/client'
+import { getStatus } from '../local/repo'
 
-const POLL_INTERVAL_MS = 1500
+const POLL_INTERVAL_MS = 1200
 
 /**
- * 仅在 App 处于前台且状态未终止时轮询；终态回调只触发一次。
+ * 本机解析没有服务端推送，只能读本地库看进度：
+ * 仅在 App 前台且状态未终止时轮询；终态回调只触发一次。
  * 调用方负责把新状态写回自己的状态，hook 本身不持有文档。
  */
 export function useLiveStatus(
@@ -45,18 +46,18 @@ export function useLiveStatus(
       if (!inFlight) {
         inFlight = true
         try {
-          const res = await api.getDocumentStatus(documentId)
+          const row = await getStatus(documentId)
           if (cancelled) return
-          if (res.status !== statusRef.current) {
-            statusRef.current = res.status
-            onStatusRef.current(res.status)
-            if (isTerminalStatus(res.status)) {
-              onSettledRef.current?.(res.status)
+          if (row && row.status !== statusRef.current) {
+            statusRef.current = row.status
+            onStatusRef.current(row.status)
+            if (isTerminalStatus(row.status)) {
+              onSettledRef.current?.(row.status)
               return
             }
           }
         } catch {
-          // 网络抖动或超时：继续静默轮询，由页面自身决定是否提示。
+          // 读库失败（例如迁移尚未完成）：继续静默轮询。
         } finally {
           inFlight = false
         }

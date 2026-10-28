@@ -1,148 +1,306 @@
 import { Ionicons } from '@expo/vector-icons'
-import { useState } from 'react'
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { formatDate } from '@xunji/shared'
+import { useCallback, useState } from 'react'
+import {
+  KeyboardAvoidingView,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native'
+import { useFocusEffect } from 'expo-router'
 
 import { AppTabBar } from '../components/AppTabBar'
 import { Button } from '../components/ui/Button'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Screen } from '../components/ui/Screen'
-import { API_BASE } from '../config/env'
-import { useAuth } from '../auth/AuthProvider'
-import { useOutbox } from '../providers/OutboxProvider'
+import {
+  DEFAULT_LLM,
+  loadLlmState,
+  saveLlmState,
+  testLlmConnection,
+} from '../local/llm'
+import { emitChange } from '../local/bus'
+import { clearAllDocuments } from '../local/db'
+import * as repo from '../local/repo'
+import { useLocalRevision } from '../local/useLocalRevision'
+import { useToast } from '../providers/ToastProvider'
 import { colors, fonts, radius, shadow, spacing, type } from '../theme'
 
 const APP_NAME = '寻迹'
 
 export function SettingsScreen() {
-  const { user, signOut } = useAuth()
-  const { pendingCount, flushing, retry } = useOutbox()
-  const [confirmingSignOut, setConfirmingSignOut] = useState(false)
+  const { toast } = useToast()
+  const revision = useLocalRevision()
 
-  const initial = user?.email?.charAt(0).toUpperCase() ?? '拾'
+  const [count, setCount] = useState<number | null>(null)
+  const [hasKey, setHasKey] = useState(false)
+  const [enabled, setEnabled] = useState(DEFAULT_LLM.enabled)
+  const [baseUrl, setBaseUrl] = useState(DEFAULT_LLM.baseUrl)
+  const [model, setModel] = useState(DEFAULT_LLM.model)
+  const [apiKey, setApiKey] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [confirmingClear, setConfirmingClear] = useState(false)
+
+  const reload = useCallback(async () => {
+    try {
+      const [total, llm] = await Promise.all([repo.countDocuments(), loadLlmState()])
+      setCount(total)
+      setEnabled(llm.enabled)
+      setBaseUrl(llm.baseUrl)
+      setModel(llm.model)
+      setHasKey(llm.hasKey)
+    } catch {
+      // 读本地库失败时保持上一次的值，不打断用户。
+    }
+  }, [])
+
+  useFocusEffect(
+    useCallback(() => {
+      void reload()
+    }, [reload, revision]),
+  )
+
+  async function handleSave() {
+    if (saving) return
+    if (enabled) {
+      if (!/^https?:\/\/\S+$/i.test(baseUrl.trim())) {
+        toast('服务地址需要以 http:// 或 https:// 开头。', { type: 'error' })
+        return
+      }
+      if (!model.trim()) {
+        toast('请填写模型名称。', { type: 'error' })
+        return
+      }
+      if (!hasKey && !apiKey.trim()) {
+        toast('请填写 API Key，或先关闭大模型。', { type: 'error' })
+        return
+      }
+    }
+
+    setSaving(true)
+    try {
+      await saveLlmState(
+        { enabled, baseUrl, model },
+        apiKey.trim() ? apiKey : undefined,
+      )
+      setApiKey('')
+      await reload()
+      toast(enabled ? '已保存，新收藏会用这个模型整理。' : '已保存，将使用本地抽取式摘要。', {
+        type: 'success',
+      })
+    } catch {
+      toast('保存设置失败，请稍后重试。', { type: 'error' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleTest() {
+    if (testing) return
+    if (!/^https?:\/\/\S+$/i.test(baseUrl.trim())) {
+      toast('服务地址需要以 http:// 或 https:// 开头。', { type: 'error' })
+      return
+    }
+    if (!hasKey && !apiKey.trim()) {
+      toast('请先填写 API Key。', { type: 'error' })
+      return
+    }
+
+    setTesting(true)
+    try {
+      const reply = await testLlmConnection({ enabled: true, baseUrl, model }, apiKey)
+      toast(`连接成功，模型回复：${reply}`, { type: 'success' })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '连接失败'
+      toast(`连接失败：${message}`, { type: 'error' })
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  async function handleClear() {
+    try {
+      await clearAllDocuments()
+      emitChange()
+      await reload()
+      toast('已清空本机收藏。', { type: 'success' })
+    } catch {
+      toast('清空失败，请稍后重试。', { type: 'error' })
+    }
+  }
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.screenTitle}>我的</Text>
+      <KeyboardAvoidingView style={styles.flex} behavior="padding">
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.screenTitle}>我的</Text>
 
-        <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initial}</Text>
+          <View style={styles.statsCard}>
+            <View style={styles.statsIcon}>
+              <Ionicons name="phone-portrait-outline" size={22} color={colors.accent} />
+            </View>
+            <View style={styles.statsBody}>
+              <Text style={styles.statsValue}>
+                {count === null ? '—' : `${count} 条收藏`}
+              </Text>
+              <Text style={styles.statsMeta}>只保存在这台手机上，不需要账号。</Text>
+            </View>
           </View>
-          <View style={styles.profileBody}>
-            <Text style={styles.email} numberOfLines={1}>
-              {user?.email ?? '正在读取账号……'}
-            </Text>
-            <Text style={styles.meta}>
-              {user ? `加入于 ${formatDate(user.created_at)}` : '网络可用后会自动刷新账号信息。'}
-            </Text>
-          </View>
-        </View>
 
-        <Text style={styles.groupLabel}>同步</Text>
-        <View style={styles.groupCard}>
-          <View style={styles.row}>
-            <View
-              style={[
-                styles.rowIcon,
-                { backgroundColor: pendingCount > 0 ? colors.warningSoft : colors.successSoft },
-              ]}
-            >
-              <Ionicons
-                name={pendingCount > 0 ? 'cloud-offline-outline' : 'cloud-done-outline'}
-                size={19}
-                color={pendingCount > 0 ? colors.warning : colors.success}
+          <Text style={styles.groupLabel}>大模型（可选）</Text>
+          <View style={styles.groupCard}>
+            <View style={styles.row}>
+              <View style={styles.rowBody}>
+                <Text style={styles.rowTitle}>用大模型写摘要</Text>
+                <Text style={styles.rowSub}>
+                  关闭时从原文抽取摘要和关键词，不联网调用任何模型。
+                </Text>
+              </View>
+              <Switch
+                value={enabled}
+                onValueChange={setEnabled}
+                trackColor={{ false: colors.lineStrong, true: colors.accentSoft }}
+                thumbColor={enabled ? colors.accent : colors.surface}
+                ios_backgroundColor={colors.lineStrong}
+                accessibilityLabel="使用大模型写摘要"
               />
             </View>
-            <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>待保存链接</Text>
-              <Text style={styles.rowSub}>
-                {pendingCount > 0
-                  ? `${pendingCount} 条等待提交，联网后自动同步。`
-                  : '没有待保存的内容，所有链接都已提交。'}
+
+            <View style={styles.divider} />
+
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>服务地址</Text>
+              <TextInput
+                value={baseUrl}
+                onChangeText={setBaseUrl}
+                placeholder={DEFAULT_LLM.baseUrl}
+                placeholderTextColor={colors.faint}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                style={styles.input}
+                selectionColor={colors.accent}
+                accessibilityLabel="大模型服务地址"
+              />
+              <Text style={styles.fieldHint}>
+                任何兼容 OpenAI Chat Completions 的服务都可以，例如自建网关。
               </Text>
             </View>
-            {pendingCount > 0 && (
+
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>模型名称</Text>
+              <TextInput
+                value={model}
+                onChangeText={setModel}
+                placeholder={DEFAULT_LLM.model}
+                placeholderTextColor={colors.faint}
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={styles.input}
+                selectionColor={colors.accent}
+                accessibilityLabel="模型名称"
+              />
+            </View>
+
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>API Key</Text>
+              <TextInput
+                value={apiKey}
+                onChangeText={setApiKey}
+                placeholder={hasKey ? '已保存在系统钥匙串，留空则不修改' : '填写你的 API Key'}
+                placeholderTextColor={colors.faint}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+                style={styles.input}
+                selectionColor={colors.accent}
+                accessibilityLabel="大模型 API Key"
+              />
+              <Text style={styles.fieldHint}>
+                密钥只写入系统钥匙串 / Keystore，不会上传，也不会显示在日志里。
+              </Text>
+            </View>
+
+            <View style={styles.actions}>
               <Button
-                label={flushing ? '同步中' : '同步'}
-                onPress={retry}
-                loading={flushing}
+                label={saving ? '保存中…' : '保存设置'}
+                onPress={() => void handleSave()}
+                loading={saving}
+                size="small"
+                style={styles.actionButton}
+              />
+              <Button
+                label={testing ? '测试中…' : '测试连接'}
+                onPress={() => void handleTest()}
+                loading={testing}
                 variant="secondary"
                 size="small"
+                style={styles.actionButton}
               />
-            )}
+            </View>
           </View>
-        </View>
 
-        <Text style={styles.groupLabel}>连接</Text>
-        <View style={styles.groupCard}>
-          <View style={styles.row}>
-            <View style={styles.rowIcon}>
-              <Ionicons name="server-outline" size={19} color={colors.inkSoft} />
+          <Text style={styles.groupLabel}>数据</Text>
+          <View style={styles.groupCard}>
+            <View style={styles.row}>
+              <View style={styles.rowIcon}>
+                <Ionicons name="archive-outline" size={19} color={colors.inkSoft} />
+              </View>
+              <View style={styles.rowBody}>
+                <Text style={styles.rowTitle}>本机存储</Text>
+                <Text style={styles.rowSub}>
+                  正文、摘要和索引都在手机本地数据库（xunji.db）里。
+                </Text>
+              </View>
             </View>
-            <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>服务地址</Text>
-              <Text style={styles.code} selectable>
-                {API_BASE}
-              </Text>
+            <View style={styles.divider} />
+            <View style={styles.row}>
+              <View style={styles.rowIcon}>
+                <Ionicons name="sync-outline" size={19} color={colors.inkSoft} />
+              </View>
+              <View style={styles.rowBody}>
+                <Text style={styles.rowTitle}>多端同步</Text>
+                <Text style={styles.rowSub}>
+                  暂未开启。数据已按同步需要保留更新时间与删除标记，后续版本可以接上。
+                </Text>
+              </View>
             </View>
           </View>
-          <View style={styles.divider} />
-          <Text style={styles.note}>
-            真机调试需把 API 地址设为电脑的局域网地址，并让 API 监听 0.0.0.0。
+
+          <Pressable
+            onPress={() => setConfirmingClear(true)}
+            accessibilityRole="button"
+            accessibilityLabel="清空全部收藏"
+            style={({ pressed }) => [styles.dangerButton, pressed && styles.pressed]}
+          >
+            <Ionicons name="trash-outline" size={19} color={colors.error} />
+            <Text style={styles.dangerText}>清空全部收藏</Text>
+          </Pressable>
+
+          <Text style={styles.footer}>
+            {APP_NAME} · Xunji · Save anything. Find it by memory.
           </Text>
-        </View>
-
-        <Text style={styles.groupLabel}>隐私</Text>
-        <View style={styles.groupCard}>
-          <View style={styles.row}>
-            <View style={styles.rowIcon}>
-              <Ionicons name="shield-checkmark-outline" size={19} color={colors.inkSoft} />
-            </View>
-            <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>按账号隔离</Text>
-              <Text style={styles.rowSub}>
-                收藏、摘要与索引都只属于你，其他用户无法看到或搜索到。
-              </Text>
-            </View>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.row}>
-            <View style={styles.rowIcon}>
-              <Ionicons name="key-outline" size={19} color={colors.inkSoft} />
-            </View>
-            <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>登录状态</Text>
-              <Text style={styles.rowSub}>
-                令牌保存在系统钥匙串 / Keystore 中，最长保留 30 天；待保存队列只记录链接。
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <Pressable
-          onPress={() => setConfirmingSignOut(true)}
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.signOut, pressed && styles.pressed]}
-        >
-          <Ionicons name="log-out-outline" size={19} color={colors.error} />
-          <Text style={styles.signOutText}>退出登录</Text>
-        </Pressable>
-
-        <Text style={styles.footer}>{APP_NAME} · Xunji · Save anything. Find it by memory.</Text>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
       <AppTabBar active="settings" />
       <ConfirmDialog
-        visible={confirmingSignOut}
-        title="退出登录？"
-        message="本机保存的登录状态会被清除，尚未同步的待保存链接也会清空。"
-        confirmLabel="退出"
+        visible={confirmingClear}
+        title="清空全部收藏？"
+        message="本机的正文、摘要和索引都会被删除，无法恢复。大模型设置会保留。"
+        confirmLabel="清空"
         destructive
-        onCancel={() => setConfirmingSignOut(false)}
+        onCancel={() => setConfirmingClear(false)}
         onConfirm={() => {
-          setConfirmingSignOut(false)
-          void signOut()
+          setConfirmingClear(false)
+          void handleClear()
         }}
       />
     </Screen>
@@ -150,6 +308,9 @@ export function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  flex: {
+    flex: 1,
+  },
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
@@ -159,7 +320,7 @@ const styles = StyleSheet.create({
     ...type.display,
     color: colors.ink,
   },
-  profileCard: {
+  statsCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
@@ -169,28 +330,24 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     ...shadow.card,
   },
-  avatar: {
+  statsIcon: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.accentSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: {
-    color: colors.white,
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  profileBody: {
+  statsBody: {
     flex: 1,
     gap: 2,
   },
-  email: {
+  statsValue: {
     ...type.title,
+    fontSize: 18,
     color: colors.ink,
   },
-  meta: {
+  statsMeta: {
     ...type.caption,
     color: colors.faint,
   },
@@ -236,24 +393,44 @@ const styles = StyleSheet.create({
     ...type.caption,
     color: colors.muted,
   },
-  code: {
-    fontFamily: fonts.mono,
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.inkSoft,
-  },
   divider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.line,
     marginVertical: spacing.md,
     marginLeft: 48,
   },
-  note: {
+  field: {
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+  },
+  fieldLabel: {
+    ...type.caption,
+    color: colors.muted,
+    fontWeight: '600',
+  },
+  input: {
+    ...type.body,
+    color: colors.ink,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.control,
+    paddingHorizontal: spacing.md,
+    minHeight: 46,
+    fontFamily: fonts.display,
+  },
+  fieldHint: {
     ...type.caption,
     color: colors.faint,
-    marginLeft: 48,
   },
-  signOut: {
+  actions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  actionButton: {
+    flex: 1,
+  },
+  dangerButton: {
     marginTop: spacing.xl,
     flexDirection: 'row',
     alignItems: 'center',
@@ -264,7 +441,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     ...shadow.card,
   },
-  signOutText: {
+  dangerText: {
     ...type.body,
     color: colors.error,
     fontWeight: '600',

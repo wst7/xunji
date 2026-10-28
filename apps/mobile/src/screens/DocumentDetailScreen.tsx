@@ -19,7 +19,6 @@ import {
   SOURCE_TYPE_LABELS,
 } from '@xunji/shared'
 
-import { api } from '../api/client'
 import { LiveStatusBadge } from '../components/LiveStatusBadge'
 import { Markdown } from '../components/Markdown'
 import { RelatedList } from '../components/RelatedList'
@@ -27,6 +26,8 @@ import { Button } from '../components/ui/Button'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Notice } from '../components/ui/Notice'
 import { Screen } from '../components/ui/Screen'
+import { processPendingQueue } from '../local/pipeline'
+import * as repo from '../local/repo'
 import { useToast } from '../providers/ToastProvider'
 import { colors, radius, shadow, spacing, type } from '../theme'
 
@@ -83,10 +84,17 @@ export function DocumentDetailScreen() {
   const load = useCallback(async () => {
     if (!id) return
     try {
-      const [detail, relatedRes] = await Promise.all([api.getDocument(id), api.getRelated(id)])
+      const [detail, relatedItems] = await Promise.all([
+        repo.getDocument(id),
+        repo.relatedDocuments(id),
+      ])
+      if (!detail) {
+        setError('这篇收藏不存在，可能已经被删除。')
+        return
+      }
       setDoc(detail)
       setStatus(detail.parse_status)
-      setRelated(relatedRes.items)
+      setRelated(relatedItems)
       setError(null)
     } catch (e) {
       setError(errorMessage(e, '加载收藏详情失败，请稍后重试。'))
@@ -106,9 +114,10 @@ export function DocumentDetailScreen() {
     if (!id || reprocessing) return
     setReprocessing(true)
     try {
-      await api.reprocessDocument(id)
+      await repo.markForRetry(id)
       setStatus('pending')
-      toast('已重新提交解析任务，正在整理内容……')
+      toast('已重新排入本机解析队列，正在整理内容……')
+      void processPendingQueue()
     } catch (e) {
       toast(errorMessage(e, '重新解析失败，请稍后重试。'), { type: 'error' })
     } finally {
@@ -120,7 +129,7 @@ export function DocumentDetailScreen() {
     if (!id) return
     setDeleting(true)
     try {
-      await api.deleteDocument(id)
+      await repo.deleteDocument(id)
       toast('已删除这篇收藏。')
       if (router.canGoBack()) router.back()
       else router.replace('/documents')

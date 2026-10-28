@@ -523,38 +523,50 @@ def search(session, user_id: str, query: str, limit: int = 10, settings=None) ->
 - 状态文案：pending→等待整理；fetching→读取网页中；parsing→整理正文中；analyzing→提取重点中；indexing→建立索引中；completed→已完成整理；partial→部分内容无法读取；failed→暂时无法解析。
 - 异常兜底：服务端未给 message 时按错误码展示（如 `请输入有效的网页链接。`、`保存失败，请稍后重试。`、`搜索暂时不可用，请稍后重试。`）。
 
-### 7.2 移动端（`apps/mobile`）
+### 7.2 移动端（`apps/mobile`）——本地优先，无登录
 
-- 独立 iOS + Android App，不是 PWA；与 Web 共用 `/api/v1`，不新增业务接口。
-- API base 是绝对地址：`EXPO_PUBLIC_API_BASE_URL`，未配置时 iOS 模拟器用
-  `http://localhost:8000/api/v1`、Android 模拟器用 `http://10.0.2.2:8000/api/v1`。
-  真机通过局域网地址访问，API 必须 `--host 0.0.0.0`。构建时内联，修改后需 `-c` 清缓存。
-- 请求通过 `@xunji/api` 的 `createApiClient`；本端 adapter 提供绝对 base URL、SecureStore token
-  （`getToken` 内等待启动读取完成）和 401 事件。超时、信封解析与接口定义均在共享包。
-- 请求 15s 超时；401（登录/注册除外）清 SecureStore token 并切回未登录；网络失败保持登录态。
-  401 只处理本次请求所用 token 仍是当前 token 的情况，避免账号切换时误清。
-- token 键 `xunji.token.v1`（SecureStore）；缓存用户 `xunji.user.v1`；待保存队列
-  `xunji.outbox.v1`；未登录分享 `xunji.pendingShare.v1`（均为 AsyncStorage，后者仅 URL）。
-- 路由：`/`（首页）、`/login`、`/register`、`/documents`、`/documents/[id]`、`/settings`、`/share`。
+- 独立 iOS + Android App，不是 PWA，**不调用 `/api/v1`**，不需要后端、账号或网络配置。
+  收藏、正文、摘要与索引全部保存在本机；服务端仅保留给自托管与未来的多端同步。
+- 本地库：`expo-sqlite` 打开 `xunji.db`（WAL）。`documents` 表字段与后端 DDL 对齐
+  （`url`、`canonical_url`、`title`、`site_name`、`source_type`、`summary_*`、`keywords`、
+  `content_markdown`、`plain_text`、`search_text`、`parse_status`、`parse_stage`、
+  `parse_error_code`、`saved_at`、`last_parsed_at`、`updated_at`、`deleted_at`、`metadata`）。
+- 同步准备：`updated_at` 每次写入都更新，删除写墓碑 `deleted_at` 而不物理删除；条目 `id`
+  为设备内生成的稳定 UUID。`documents_url_active_idx` 是 `url WHERE deleted_at IS NULL`
+  的部分唯一索引，删除后同一链接可以重新收藏。
+- 解析流水线（`src/local/pipeline.ts`）：保存后 `pending → fetching → parsing →
+  analyzing → completed`。抓取失败 `failed` + `FETCH_FAILED`；正文少于 120 字记
+  `partial` + `PARSE_INCOMPLETE`，元信息照常保留。`processPendingQueue()` 单飞、串行，
+  每次最多 20 条，在启动、保存、页面聚焦、回到前台和手动重试时触发。重新解析
+  （`markForRetry`）把状态改回 `pending`。
+- 检索完全在本地（`src/local/repo.ts`）：查询先去掉中文叙述性填充词，英文按词、中文按
+  二元组切分；标题 10 / 关键词 7 / 摘要 4 / 正文 2 / 来源 3 加权，按查询词数归一化。
+  `match_reason` 只写真实命中的字段与词，`matched_excerpt` 从原文截取。最多扫描最近
+  2000 条。相关收藏用共享关键词 + 标题二元组重合度计算。
+- 大模型（可选）：`src/local/llm.ts` 调用用户配置的任意 OpenAI 兼容
+  `POST {baseUrl}/chat/completions`，30s 超时，要求返回
+  `{"summary","keywords"}`（容忍代码块包裹）；服务地址与模型名存 AsyncStorage
+  （`xunji.llm.v1`），API Key 只存 `expo-secure-store`（`xunji.llm.key.v1`），
+  不写日志、不上传。未启用或调用失败时退回抽取式摘要，流水线不中断。
+- 路由：`/`（首页）、`/documents`、`/documents/[id]`、`/settings`、`/share`。
   首页 / 收藏 / 我的三栏底部导航（`components/AppTabBar.tsx`，`router.replace` 切换，不保留历史）；
-  详情、分享、登录、注册为无 Tab 的推入页。
-- 首页：搜索 + 保存 + 最近 6 条；保存与搜索行为、toast 文案与 Web 一致。
+  详情与分享为无 Tab 的推入页。
+- 首页：搜索 + 保存 + 最近 6 条；保存重复链接返回已有条目；保存后立即 `pending` 并触发流水线。
 - `/documents`：关键词 300ms 防抖、20 条/页、触底加载。`/documents/[id]`：详情、Markdown、
-  相关收藏、重新解析、删除确认、打开原文；非终态每 1.5s 轮询，App 后台时暂停。
-- 离线：网络失败的手动保存/分享保存进入按 `userId` 隔离的队列（每用户上限 50，仅 URL）。
-  登录、已登录启动、回到前台、首页聚焦、手动重试、前台每 60s 触发；单飞、顺序提交；
-  成功/重复/永久 4xx 出队，网络错误与 5xx 保留，401 停止并交给鉴权。显式退出清空队列。
+  相关收藏、重新解析、删除确认、打开原文；非终态每 1.2s 读本地库状态（App 后台时暂停），
+  终态停止并重载详情。
+- 设置：本机收藏数量、大模型（开关 / 地址 / 模型 / Key / 保存 / 测试连接）、
+  多端同步说明、清空全部收藏（二次确认，保留大模型设置）。
 - 系统分享使用 `expo-share-intent`：iOS Share Extension + Android `ACTION_SEND`（`text/*`），
   仅 development build / 正式包可用，Expo Go 自动跳过分享桥。先读取合法 `webUrl`，否则从
-  `text` 提取第一段 http(s) URL；**在异步保存前重置原生 payload**；未登录写入待处理分享，
-  登录后自动提交；新收藏进详情，重复进已有详情，离线入队。
+  `text` 提取第一段 http(s) URL；**在异步保存前重置原生 payload**；随后直接进入 `/share`
+  在本机保存并跳转详情，不需要登录。
 - 原生限制：iOS 分享扩展会打开主 App 完成保存；没有 URL 的分享（仅标题/描述/短链）无法保存。
-- 开发构建允许局域网 HTTP（ATS 例外、Android cleartext）；正式构建必须 HTTPS。
-  公网暴露前需要 TLS 反向代理与 `/auth/*` 限流（当前未实现）。
-- 视觉：与 Web 相同的纸面/墨色/赭红令牌，衬线仅用于品牌字（iOS `Songti SC`，Android `serif`）；
-  正文系统无衬线；卡片 18px 圆角 + 发丝描边、药丸形搜索框、Ionicons 线性图标
-  （`@expo/vector-icons`）、底部 Tab、最小 44pt 触控高度；Markdown 为 RN 受限渲染，不注入 HTML、
-  不用 WebView。
+- 开发构建允许任意 HTTP（ATS 例外、Android cleartext），因为 App 直接抓取网页、也可能连接
+  局域网模型服务；正式构建只允许 HTTPS。
+- 视觉：独立的冷中性现代移动端设计语言（`src/theme.ts`）：浅冷灰画布、白色卡片、靛蓝强调色、
+  系统无衬线；18px 卡片圆角 + 柔和投影、药丸形输入框、Ionicons 线性图标、底部 Tab、
+  最小 44pt 触控高度；Markdown 为 RN 受限渲染，不注入 HTML、不用 WebView。
 
 ## 8. 验证命令（每个切片完成后必须自证）
 

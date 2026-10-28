@@ -2,74 +2,50 @@ import { Ionicons } from '@expo/vector-icons'
 import { useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { ApiError, errorMessage, isValidHttpUrl } from '@xunji/shared'
+import { errorMessage, isValidHttpUrl } from '@xunji/shared'
 
-import { api } from '../api/client'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Screen } from '../components/ui/Screen'
-import { savePendingShare } from '../auth/pendingShare'
-import { useAuth } from '../auth/AuthProvider'
-import { useOutbox } from '../providers/OutboxProvider'
+import { processPendingQueue } from '../local/pipeline'
+import * as repo from '../local/repo'
 import { useToast } from '../providers/ToastProvider'
-import { colors } from '../theme'
+import { colors, spacing, type } from '../theme'
 
-/** 分享进入后的保存结果页：自动提交一次，然后跳到详情或首页。 */
+/** 分享进入后的保存结果页：保存到本机一次，然后跳到详情。 */
 export function ShareScreen() {
   const router = useRouter()
   const params = useLocalSearchParams<{ url?: string | string[] }>()
   const rawUrl = Array.isArray(params.url) ? params.url[0] : params.url
   const url = rawUrl && isValidHttpUrl(rawUrl) ? rawUrl : null
-  const { status } = useAuth()
-  const { enqueue } = useOutbox()
   const { toast } = useToast()
 
   const started = useRef<string | null>(null)
-  const pendingSaved = useRef(false)
   const [error, setError] = useState<string | null>(null)
 
-  // 未登录直接进入 /share 时，先留下链接，登录后由根布局继续保存。
   useEffect(() => {
-    if (status !== 'unauthenticated' || !url || pendingSaved.current) return
-    pendingSaved.current = true
-    void savePendingShare(url)
-  }, [status, url])
-
-  useEffect(() => {
-    if (!url || status !== 'authenticated') return
+    if (!url) return
     if (started.current === url) return
     started.current = url
 
     void (async () => {
       try {
-        const res = await api.createDocument(url)
+        const res = await repo.createDocument(url)
         if (res.duplicate) {
           toast('这篇内容已经保存过了。')
         } else {
-          toast('已保存，正在整理内容……')
+          toast('已保存，正在本机整理内容……', { type: 'success' })
+          void processPendingQueue()
         }
         router.replace(`/documents/${res.id}`)
       } catch (e) {
-        if (e instanceof ApiError && e.code === 'NETWORK_ERROR') {
-          try {
-            const queued = await enqueue(url, 'share')
-            toast(
-              queued === 'added'
-                ? '已保存到本地，联网后会自动同步。'
-                : queued === 'trimmed'
-                  ? '已保存到本地；队列已满，最早的一条被移出。'
-                  : '这条链接已经在待保存队列里了。',
-              { type: 'warning' },
-            )
-            router.replace('/')
-          } catch {
-            setError('保存失败，请稍后重试。')
-          }
+        if (e instanceof Error && e.message === 'INVALID_URL') {
+          setError('这不是一个可以保存的链接。')
           return
         }
         setError(errorMessage(e, '保存失败，请稍后重试。'))
       }
     })()
-  }, [url, status, enqueue, router, toast])
+  }, [url, router, toast])
 
   return (
     <Screen>
@@ -102,7 +78,7 @@ export function ShareScreen() {
         ) : (
           <View style={styles.loading}>
             <ActivityIndicator color={colors.accent} />
-            <Text style={styles.loadingText}>正在保存……</Text>
+            <Text style={styles.loadingText}>正在保存到本机……</Text>
           </View>
         )}
       </View>
@@ -115,7 +91,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     minHeight: 52,
   },
   iconButton: {
@@ -133,25 +109,25 @@ const styles = StyleSheet.create({
     height: 40,
   },
   topbarTitle: {
-    color: colors.ink,
-    fontSize: 15.5,
+    ...type.body,
     fontWeight: '600',
+    color: colors.ink,
   },
   pressed: {
     opacity: 0.6,
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 24,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
   },
   loading: {
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
     paddingVertical: 40,
   },
   loadingText: {
+    ...type.caption,
     color: colors.faint,
-    fontSize: 12.5,
   },
 })

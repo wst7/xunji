@@ -75,14 +75,21 @@ npm run dev:landing    # 说明页 http://localhost:5174
 > 默认代理到 `http://localhost:8000`；本机 8000 被占用时用
 > `XUNJI_API_TARGET=http://127.0.0.1:8010 npm run dev` 指定 API 端口。
 
-### 手机 App（Expo / React Native，独立客户端）
+### 手机 App（Expo / React Native，本地优先）
 
-`apps/mobile` 是独立的 iOS / Android 客户端，不是 PWA：登录、粘贴保存、系统分享、
-自然语言找回、详情与离线待保存队列都直接调用同一个 `/api/v1`，后端不需要改动。
-它使用 Expo SDK 58 + Expo Router，界面为独立的冷中性现代移动端视觉（浅冷灰画布、白色卡片、
-靛蓝强调色、系统无衬线），不沿用 Web 的暖色纸感；平台无关的格式化逻辑在
-`@xunji/shared`，HTTP 传输（超时、`{data}` 解包、错误信封、接口定义）在 `@xunji/api`，
-两端只保留各自的 API 地址、token 读取和 401 处理适配。
+`apps/mobile` 是独立的 iOS / Android 客户端，不是 PWA，也**不依赖后端**、不需要登录：
+收藏只存在手机本地，抓取正文、摘要、索引和检索全部在设备上完成。服务端（`backend/`、
+`apps/web/`）仍然保留，面向自托管和未来的多端同步，但 App 不调用它。
+
+- 本地库是 SQLite（`expo-sqlite`，`src/local/db.ts`）：`documents` 表保存正文、摘要、
+  关键词与检索文本，`documents_url_active_idx` 保证同一条链接只有一条有效收藏。
+- 删除是墓碑（`deleted_at`），并保留 `updated_at`——数据模型已经为以后的多端同步留好合并依据。
+- 保存后在 `src/local/pipeline.ts` 里串行处理：抓取 → 启发式正文抽取 → 摘要 → 落库，
+  状态仍是 `pending → fetching → parsing → analyzing → completed | partial | failed`。
+- 检索在 `src/local/repo.ts` 里完成：中文二元组 + 英文词切分，按标题 / 关键词 / 摘要 / 正文
+  加权打分，`match_reason` 只由真实命中项拼出，不生成原文没有的内容。
+- 设置页可以接入用户自己的大模型（任意 OpenAI 兼容 `chat/completions`）：地址与模型名存
+  AsyncStorage，API Key 只存 `expo-secure-store`；不配置时用原文抽取式摘要。
 
 ```bash
 # 仓库根目录
@@ -96,50 +103,32 @@ npm run mobile:ios          # expo run:ios，需要 Xcode + CocoaPods
 npm run mobile:android      # expo run:android，需要 Android Studio / SDK
 ```
 
-API 地址在打包时内联，不是密钥，但改了要清缓存重启：
-
-```bash
-# 模拟器默认：iOS http://localhost:8000/api/v1，Android http://10.0.2.2:8000/api/v1
-# 真机必须填电脑的局域网地址（可在 apps/mobile/.env 或命令前设置）
-EXPO_PUBLIC_API_BASE_URL=http://192.168.1.10:8000/api/v1 npm run dev:mobile -- -c
-```
-
-真机调试时让 API 监听所有网卡（Mac 的局域网 IP 可用 `ipconfig getifaddr en0` 查看）：
-
-```bash
-cd backend
-.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
-```
+不需要配置 API 地址，也没有 `EXPO_PUBLIC_API_BASE_URL`。界面是独立的冷中性现代移动端视觉
+（浅冷灰画布、白色卡片、靛蓝强调色、系统无衬线），定义在 `apps/mobile/src/theme.ts`，
+不与 Web 的暖色纸感共享；底部三标签（首页 / 收藏 / 我的）在 `components/AppTabBar.tsx`。
 
 系统分享使用 `expo-share-intent`，只在 development build / 正式包中可用：
 
 - iOS 使用 Share Extension，Android 注册 `ACTION_SEND` + `text/*`；
 - 首次原生构建后，iOS 需要在 Xcode 中为 App 和 ShareExtension 选择同一个 Development Team
   （两者共用 App Group `group.com.xunji.app`）；Android 需要可用的 SDK；
-- iOS 分享扩展不能静默后台上传，会打开寻迹完成保存；
+- 分享进入后直接在本机保存并跳到详情，不需要登录；
 - 微信、小红书等若只分享标题/描述或短链而没有 URL，寻迹无法保存，会提示没有网页链接。
 
-开发构建允许局域网 HTTP（iOS ATS 例外、Android `usesCleartextTraffic`），
-正式构建必须通过 HTTPS 暴露 API；当前后端没有限流，公网使用前应补 `/auth/*` 限流。
-`ios/`、`android/` 是由 Expo 连续原生生成（prebuild）的产物，不提交到 Git。
+开发构建允许任意 HTTP（iOS ATS 例外、Android `usesCleartextTraffic`），方便抓取局域网页面
+或连接本机模型服务；正式构建只允许 HTTPS。`ios/`、`android/` 是 `expo prebuild` 的产物，
+不提交到 Git。
 
-Android 端已在本机完成原生编译与模拟器冒烟验证：`expo prebuild` 生成原生工程后，用
-Android Studio 的 JBR 25 与 Gradle 9.6.0 构建 release APK，并在 arm64 模拟器上通过局域网
-连接真实 API 与 Worker，验证了登录、保存、自然语言找回、详情、重新解析、删除、退出后重新
-登录、离线待保存队列与自动补交，以及 `ACTION_SEND` 系统分享（纯 URL 和「正文 + 链接」两种
-形态都能提取链接并跳转到新收藏详情）。
-APK 产物位于 `apps/mobile/android/app/build/outputs/apk/release/`。
-iOS 端目前只验证了 TypeScript、Expo 配置、JS bundle 与 prebuild；本机 CocoaPods 安装
-依赖时网络失败，尚未编译运行。真机安装与 iOS 编译仍需要相应的原生工具链。
+已验证：`npm run mobile:typecheck` 通过，`expo export --platform android` 能打出 JS bundle。
+旧版本曾在 arm64 模拟器上完成原生编译与局域网后端冒烟；改为本地存储后，原生编译与真机
+分享仍需 Xcode / Android Studio / EAS 验证。
 
 ### 安装到 Android 手机
 
 **不装 Android Studio 也能出包**：`.github/workflows/android.yml` 在 GitHub 上构建
-release APK（arm64，JS 已打进包，可独立运行）。前提是在仓库
-Settings → Secrets and variables → Actions → Variables 里设置
-`XUNJI_API_BASE_URL=https://<web 域名>/api/v1`（必须是 HTTPS）。然后推送代码或在
-Actions 页手动运行，产物在运行页的 Artifacts 里（`xunji-apk-<sha>`）。
-签名用的是 RN/Expo 模板自带的 debug 密钥，够自己安装，**不能上架**。
+release APK（arm64，JS 已打进包，可独立运行）。不需要任何仓库变量；推送代码或在 Actions
+页手动运行，产物在运行页的 Artifacts 里（`xunji-apk-<sha>`）。签名用的是 RN/Expo 模板自带
+的 debug 密钥，够自己安装，**不能上架**。
 
 本机构建：
 
@@ -148,20 +137,12 @@ Actions 页手动运行，产物在运行页的 Artifacts 里（`xunji-apk-<sha>
 cd apps/mobile/android
 JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" \
 ANDROID_HOME="$HOME/Library/Android/sdk" \
-EXPO_PUBLIC_API_BASE_URL=http://<Mac的局域网IP>:8010/api/v1 \
-./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a \
-  -Pandroid.enableMinifyInReleaseBuilds=false
+./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
 ```
 
-安装包为 `app/build/outputs/apk/release/app-release.apk`（约 36 MB，仅 `arm64-v8a`）。
-传到手机后需要允许“未知来源”安装；`release` 变体目前用 debug 签名，**不能上架**，
-只用于自己安装体验。已构建好的版本复制到 `~/Downloads/Xunji-0.1.0-arm64.apk`
-（包名 `com.xunji.app`，应用名「寻迹」）。
-
-真机可用的前提是同一 Wi-Fi 下：Mac 上的 API 用 `--host 0.0.0.0` 监听、Worker 在跑、
-APK 里内联的地址就是 Mac 当前的局域网 IP（换网络要重新构建），且 Mac 不睡眠。
-`apps/mobile/src/theme.ts` 只保留浅色主题，界面为底部三标签（首页 / 收藏 / 我的），
-底部标签在 `components/AppTabBar.tsx`。
+安装包为 `app/build/outputs/apk/release/app-release.apk`。传到手机后需要允许“未知来源”
+安装；`release` 变体目前用 debug 签名，**不能上架**，只用于自己安装体验。装好后不需要任何
+配置，粘贴或分享链接即可，数据全部留在手机上。
 
 ### 仓库结构
 
@@ -192,36 +173,27 @@ xunji/
 `http://localhost:5174`（compose 中为 `http://localhost:3001`）。说明页里的产品截图
 存放在 `apps/landing/public/shots/`，是用真实数据从运行中的应用截取的，改动界面后需要重截。
 
-首次使用：打开前端 → 注册 → 粘贴链接或包含链接的分享文字保存 → 等状态变为「已完成整理」→ 搜索。
+首次使用（App）：安装后直接粘贴或分享链接保存 → 等状态变为「已完成整理」→ 用一句描述搜索。
 
 ## 部署
 
-两种形态共用同一份代码，按预算选一种，**不要同时部署**。
+**Web 部署已暂停。** 主力产品是手机 App；`apps/web` 和 `backend/` 继续留在仓库里用于本地
+开发与自托管，但不再随版本发布，也不再触发部署流程。
 
-### 免费（$0）：一个容器 + 外部数据库
+### 说明页：GitHub Pages
 
-`deploy/free/Dockerfile` 把 API、Worker 和网页构建产物打进同一个镜像：
-`uvicorn` 提供 `/api/v1`，worker 作为子进程领任务，FastAPI 顺带托管前端（`XUNJI_WEB_DIR`），
-因此不需要 Nginx 和跨域。数据库用 Supabase 免费 PostgreSQL（需要 `vector`、`pg_trgm`、`pgcrypto`）。
+`.github/workflows/pages.yml` 在 `apps/landing/**` 变更时构建说明页并发布到 GitHub Pages：
 
-Render 直接读仓库根目录的 `render.yaml`。完整步骤、环境变量和排错见
-[`docs/DEPLOY_FREE.md`](docs/DEPLOY_FREE.md)。镜像本身是通用的，Koyeb 或自己的机器上
-用 `docker build -f deploy/free/Dockerfile -t xunji .` 也能跑。
+- 站点地址：`https://wst7.github.io/xunji/`（项目站点，Vite `base` 为相对路径）；
+- 应用入口指向 `https://github.com/wst7/xunji/releases/latest`（APK 放在 Release 里）；
+- 仓库必须是 **public**：GitHub Free 计划下，私有仓库不支持 Pages。
+  如果仓库保持私有，改用 Cloudflare Pages / Netlify 等免费主机托管 `apps/landing/dist`。
 
-代价：免费实例 15 分钟无访问会休眠，冷启动约 30–60 秒；数据库容量与连接数都有上限。
+### 自托管（可选，不影响 App）
 
-### Northflank（付费，常在线）
-
-`northflank.json` 是一份 Northflank 模板：从 GitHub 构建后端镜像，创建 PostgreSQL 16、
-API、Worker 与 Web 前端（Nginx 托管前端并反代 `/api/`）。导入与后续校验步骤见
-[`docs/DEPLOY_NORTHFLANK.md`](docs/DEPLOY_NORTHFLANK.md)。
-
-要点：
-
-- 仓库必须是 Northflank 能读到的 GitHub 仓库，分支 `main`；模板用账号里已链接的 GitHub 凭据构建。
-- 密钥由模板生成或从数据库 addon 注入，**不写进 `northflank.json`**。
-- 只有 Web 有公网域名；API 走内部网络 `http://xunji-api:8000`，前端与 API 同源。
-- 手机 App 的生产 `EXPO_PUBLIC_API_BASE_URL` 指向 `https://<web 域名>/api/v1`。
+`docker compose up --build` 可以在本机跑完整的 Web + API + Worker；`render.yaml`、
+`northflank.json`、`deploy/free/` 保留为自托管模板，见 `docs/DEPLOY_FREE.md` 与
+`docs/DEPLOY_NORTHFLANK.md`。这些模板与手机 App 无关——App 完全本地运行。
 
 ## 配置
 

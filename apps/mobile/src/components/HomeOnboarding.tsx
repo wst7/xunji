@@ -12,7 +12,7 @@ const STEPS = [
   {
     icon: 'sparkles-outline' as const,
     title: '它会自己整理',
-    body: '后台抓取正文、生成摘要和关键词，通常几秒到半分钟。',
+    body: '本机抓取正文、生成摘要和关键词，通常几秒到半分钟。',
   },
   {
     icon: 'search-outline' as const,
@@ -43,7 +43,7 @@ export function HomeOnboarding() {
       </View>
       <View style={styles.footRow}>
         <Ionicons name="shield-checkmark-outline" size={13} color={colors.faint} />
-        <Text style={styles.foot}>内容只属于你这个账号，其他人搜索不到。</Text>
+        <Text style={styles.foot}>收藏只保存在这台手机上，不需要注册，也不会上传。</Text>
       </View>
     </View>
   )
