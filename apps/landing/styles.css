@@ -1,0 +1,293 @@
+/*
+ * 拾回说明页 —— 与应用同一套「温润纸感」视觉系统
+ * 米白纸面、墨色文字、赭红一点；宋体只用于标题，正文用系统黑体。
+ * 纯静态、无框架、无动效。
+ */
+
+:root {
+  color-scheme: light;
+
+  --paper: #f8f4ea;
+  --surface: #fffcf5;
+  --ink: #26231e;
+  --ink-soft: #4a453b;
+  --muted: #716958;
+  --faint: #9a917f;
+  --line: #e3dac8;
+  --line-strong: #d5c9b2;
+  --accent: #a0432e;
+  --accent-deep: #853524;
+  --accent-soft: #f2e4d9;
+  --success: #4f6b45;
+  --warning: #8a5d15;
+  --error: #9e2f26;
+  --radius: 4px;
+  --serif: 'Songti SC', 'Noto Serif CJK SC', 'Source Han Serif SC', 'STSong', 'SimSun', Georgia,
+    serif;
+  --sans: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+    'Segoe UI', Roboto, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(900px 480px at 50% -8%, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0) 70%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  background-attachment: fixed;
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--accent-deep);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+h1,
+h2 {
+  font-family: var(--serif);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* ---------- 顶栏 / 页脚 ---------- */
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px max(24px, env(safe-area-inset-left));
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.02em;
+}
+
+/* 与应用顶栏一致：赭红一点 */
+.brand::after {
+  content: '.';
+  color: var(--accent);
+}
+
+.site-footer {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 20px 24px 56px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* ---------- 按钮 ---------- */
+
+.btn {
+  display: inline-block;
+  padding: 7px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--surface);
+}
+
+.btn-primary:hover {
+  background: var(--accent-deep);
+  border-color: var(--accent-deep);
+  color: var(--surface);
+}
+
+/* ---------- 正文 ---------- */
+
+main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 52px 24px 64px;
+}
+
+h1 {
+  font-size: 1.95rem;
+  line-height: 1.45;
+  margin: 0 0 18px;
+}
+
+h2 {
+  font-size: 1.2rem;
+  margin: 0 0 14px;
+}
+
+.intro p {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+  color: var(--ink-soft);
+}
+
+.cta {
+  margin-top: 26px;
+}
+
+section + section {
+  margin-top: 40px;
+  padding-top: 32px;
+  border-top: 1px solid var(--line);
+}
+
+p {
+  margin: 0 0 12px;
+}
+
+ul {
+  margin: 0;
+  padding-left: 1.3em;
+}
+
+li {
+  margin-bottom: 6px;
+}
+
+li::marker {
+  color: var(--faint);
+}
+
+/* 三步用法：真实的先后顺序，才用序号 */
+.steps {
+  counter-reset: step;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.steps li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 2.2em 1fr;
+  gap: 10px;
+  margin: 0;
+  padding: 13px 15px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.steps li::before {
+  content: counter(step) '、';
+  font-family: var(--serif);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.steps strong {
+  display: block;
+  font-family: var(--serif);
+  font-size: 1.02rem;
+}
+
+.steps span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+/* 四路检索说明 */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+}
+
+th,
+td {
+  text-align: left;
+  vertical-align: top;
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+th {
+  width: 7em;
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 0.98rem;
+}
+
+td {
+  color: var(--ink-soft);
+  font-size: 0.97rem;
+}
+
+tr:last-child th,
+tr:last-child td {
+  border-bottom: none;
+}
+
+@media (max-width: 600px) {
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  main {
+    padding: 32px 18px 48px;
+  }
+
+  .bar {
+    padding: 12px 18px;
+  }
+
+  .site-footer {
+    padding: 18px 18px 44px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

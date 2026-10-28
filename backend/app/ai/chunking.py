@@ -1,0 +1,142 @@
+"""文本切分：段落优先、句子兜底、带重叠、不拆散句子。"""
+from __future__ import annotations
+
+import re
+
+_SENTENCE_TERMINALS = "。！？…；;.!?"
+# 段落边界：连续空行（容忍 Windows 换行与全角空格）
+_PARAGRAPH_RE = re.compile(r"\r?\n[ \t　]*\r?\n+")
+
+
+def split_sentences(text: str) -> list[str]:
+    """中英文混排的句子切分：句末标点后断句；英文句点后必须跟空白或结尾。
+
+    返回的每个句子都是原文的连续子串（strip 后）。
+    """
+    if not text:
+        return []
+    sentences: list[str] = []
+    start = 0
+    i = 0
+    n = len(text)
+    while i < n:
+        char = text[i]
+        if char in _SENTENCE_TERMINALS:
+            j = i + 1
+            while j < n and text[j] in _SENTENCE_TERMINALS:
+                j += 1
+            if char == "." and j < n and not text[j].isspace():
+                i += 1
+                continue  # 小数/缩写，不断句
+            while j < n and text[j].isspace():
+                j += 1
+            segment = text[start:j].strip()
+            if segment:
+                sentences.append(segment)
+            start = j
+            i = j
+        else:
+            i += 1
+    tail = text[start:].strip()
+    if tail:
+        sentences.append(tail)
+    return sentences
+
+
+def join_sentences(sentences: list[str]) -> str:
+    """按边界拼回：两个 ASCII 字母数字相邻时补空格，其余直接相连。"""
+    result = ""
+    for sentence in sentences:
+        if not sentence:
+            continue
+        if (
+            result
+            and not result[-1].isspace()
+            and not sentence[0].isspace()
+            and result[-1].isascii()
+            and result[-1].isalnum()
+            and sentence[0].isascii()
+            and sentence[0].isalnum()
+        ):
+            result += " "
+        result += sentence
+    return result
+
+
+def _tail_boundary(text: str, overlap: int) -> str:
+    """取文本末尾 overlap 字符作为重叠，尽量从词/句边界起切。"""
+    if overlap <= 0 or not text:
+        return ""
+    if len(text) <= overlap:
+        return text
+    tail = text[-overlap:]
+    # 在前 1/3 内找最近的边界（空白/标点），避免从词中间断开
+    window = tail[: max(1, len(tail) // 3)]
+    candidates = [tail.find(ch, len(window) // 2) for ch in " \n。！？.!?\t，,；;"]
+    cuts = [pos for pos in candidates if pos > 0]
+    if cuts:
+        tail = tail[min(cuts):]
+    return tail.strip()
+
+
+def _pack_long(paragraph: str, max_chars: int) -> list[str]:
+    """超长段落按句子成组，句子优先；单句超限才退化为定长硬切。"""
+    pieces: list[str] = []
+    buffer = ""
+    for sentence in split_sentences(paragraph):
+        if len(sentence) > max_chars:  # 极端：单句比整个块还长
+            if buffer:
+                pieces.append(buffer)
+                buffer = ""
+            pieces.extend(
+                sentence[k : k + max_chars] for k in range(0, len(sentence), max_chars)
+            )
+            continue
+        candidate = f"{buffer}{sentence}" if not buffer else join_sentences([buffer, sentence])
+        if len(candidate) <= max_chars:
+            buffer = candidate
+        else:
+            if buffer:
+                pieces.append(buffer)
+            buffer = sentence
+    if buffer:
+        pieces.append(buffer)
+    return pieces
+
+
+def chunk_text(text: str, max_chars: int = 1200, overlap: int = 150) -> list[str]:
+    """段落优先的贪心打包：段落成块，超长段落按句子切；块间带重叠。
+
+    每个块都是原文的连续内容（重叠部分除外），空文本返回 []。
+    """
+    if not text or not text.strip() or max_chars <= 0:
+        return []
+    overlap = max(0, min(overlap, max_chars - 1))
+
+    paragraphs = [p.strip() for p in _PARAGRAPH_RE.split(text) if p.strip()]
+    pieces: list[str] = []
+    for paragraph in paragraphs:
+        if len(paragraph) <= max_chars:
+            pieces.append(paragraph)
+        else:
+            pieces.extend(_pack_long(paragraph, max_chars))
+
+    chunks: list[str] = []
+    buffer = ""
+    for piece in pieces:
+        if not buffer:
+            buffer = piece
+            continue
+        separator = "\n\n"
+        if len(buffer) + len(separator) + len(piece) <= max_chars:
+            buffer = buffer + separator + piece
+            continue
+        chunks.append(buffer)
+        tail = _tail_boundary(buffer, overlap)
+        # 重叠段与下一块用原文的段落分隔符相连，保证块仍是原文的连续片段
+        while tail and len(tail) + 2 + len(piece) > max_chars:
+            tail = _tail_boundary(buffer, len(tail) // 2)
+        buffer = f"{tail}\n\n{piece}" if tail else piece
+    if buffer:
+        chunks.append(buffer)
+    return [chunk for chunk in chunks if chunk.strip()]

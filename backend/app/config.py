@@ -1,0 +1,127 @@
+"""应用配置：全部通过环境变量提供，禁止把密钥写入源码。"""
+from __future__ import annotations
+
+from functools import lru_cache
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=False)
+
+    # 基础
+    database_url: str = "postgresql+psycopg://recall:recall@localhost:5432/recall"
+    app_secret: str = ""
+    log_level: str = "INFO"
+
+    # AI 摘要（openai 表示任意 OpenAI 兼容服务，含个人服务商/中转站/Ollama/vLLM）
+    ai_provider: str = "extractive"  # extractive | openai | openai-compatible
+    ai_api_key: str = ""
+    ai_base_url: str = "https://api.openai.com/v1"
+    ai_model: str = "gpt-4o-mini"
+    ai_chat_path: str = "/chat/completions"
+    ai_auth_header: str = "Authorization"
+    ai_auth_prefix: str = "Bearer"  # 可为空，表示直接发送 api_key
+    ai_extra_headers: str = "{}"  # JSON 对象，如 {"X-Custom":"value"}
+    ai_json_mode: bool = True  # 服务商不支持 response_format 时设为 false
+    ai_timeout_seconds: float = 60.0
+
+    # Embedding
+    embedding_provider: str = "local"  # openai | openai-compatible | local
+    embedding_api_key: str = ""
+    embedding_base_url: str = "https://api.openai.com/v1"
+    embedding_model: str = "text-embedding-3-small"
+    embedding_dim: int = 1536
+    embedding_path: str = "/embeddings"
+    embedding_auth_header: str = "Authorization"
+    embedding_auth_prefix: str = "Bearer"
+    embedding_extra_headers: str = "{}"
+    embedding_timeout_seconds: float = 60.0
+
+    # 抓取安全
+    fetch_timeout_seconds: float = 15.0
+    fetch_max_bytes: int = 5 * 1024 * 1024
+    fetch_max_redirects: int = 5
+    fetch_allowed_ports: str = "80,443,8080,8443"
+
+    # 切分
+    chunk_max_chars: int = 1200
+    chunk_overlap: int = 150
+
+    # 搜索融合权重
+    search_lexical_weight: float = 0.35
+    search_semantic_weight: float = 0.35
+    search_title_weight: float = 0.20
+    search_meta_weight: float = 0.10
+    search_min_score: float = 0.05
+    search_vector_candidates: int = 50
+
+    # Worker / 任务
+    worker_poll_seconds: float = 1.0
+    worker_lease_seconds: int = 300
+    job_max_attempts: int = 3
+
+    # 会话
+    token_ttl_days: int = 30
+
+    @property
+    def allowed_ports(self) -> set[int]:
+        return {int(p.strip()) for p in self.fetch_allowed_ports.split(",") if p.strip()}
+
+    @property
+    def search_weights(self) -> dict[str, float]:
+        return {
+            "lexical": self.search_lexical_weight,
+            "semantic": self.search_semantic_weight,
+            "title": self.search_title_weight,
+            "meta": self.search_meta_weight,
+        }
+
+
+@lru_cache(maxsize=1)
+def get_settings() -> Settings:
+    return Settings()
+
+
+def validate_settings(settings: Settings) -> None:
+    """启动即校验：provider 与维度配置不合法时直接失败，不允许不兼容向量入库。"""
+    from app.ai.embedding import get_embedding_provider
+    from app.ai.openai_compat import (
+        is_openai_compatible,
+        parse_extra_headers,
+        require_openai_settings,
+    )
+
+    if settings.ai_provider not in {"openai", "openai-compatible", "openai_compatible", "extractive"}:
+        raise RuntimeError(f"不支持的 AI_PROVIDER: {settings.ai_provider}")
+    if settings.embedding_provider not in {
+        "openai", "openai-compatible", "openai_compatible", "local",
+    }:
+        raise RuntimeError(f"不支持的 EMBEDDING_PROVIDER: {settings.embedding_provider}")
+
+    if is_openai_compatible(settings.ai_provider):
+        require_openai_settings(
+            base_url=settings.ai_base_url,
+            model=settings.ai_model,
+            base_var="AI_BASE_URL",
+            model_var="AI_MODEL",
+        )
+    if is_openai_compatible(settings.embedding_provider):
+        require_openai_settings(
+            base_url=settings.embedding_base_url,
+            model=settings.embedding_model,
+            base_var="EMBEDDING_BASE_URL",
+            model_var="EMBEDDING_MODEL",
+        )
+
+    # 额外请求头必须是合法 JSON 对象，启动时暴露而不是等第一次调用失败
+    parse_extra_headers(settings.ai_extra_headers)
+    parse_extra_headers(settings.embedding_extra_headers)
+    if settings.ai_timeout_seconds <= 0 or settings.embedding_timeout_seconds <= 0:
+        raise RuntimeError("AI / Embedding 超时时间必须为正数")
+
+    provider = get_embedding_provider(settings)
+    if provider.dim != settings.embedding_dim:
+        raise RuntimeError(
+            f"Embedding 维度不匹配: provider={provider.dim} schema={settings.embedding_dim}"
+        )

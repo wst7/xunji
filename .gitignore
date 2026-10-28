@@ -1,0 +1,28 @@
+.env
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+*.log
+.DS_Store
+
+# Ruflo local secrets and runtime data
+.env.local
+.env.*.local
+.claude-flow/
+.swarm/
+.agents/
+ruvector.db
+.ruvector/
+mcp-memory.db
+
+# Agent tooling generated on this machine (not part of the product)
+.claude/
+.mcp.json

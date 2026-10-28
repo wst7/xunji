@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>拾回 — 你不需要记住收藏了什么，只需要记住你想找什么</title>
+    <meta
+      name="description"
+      content="拾回是个人链接收藏与智能找回工具：粘贴链接自动整理，未来用一句话把原文找回来。"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <span class="brand">拾回</span>
+      <a class="btn" href="__APP_URL__">打开应用</a>
+    </header>
+
+    <main>
+      <section class="intro">
+        <h1>你不需要记住收藏了什么，<br />只需要记住你想找什么。</h1>
+        <p>
+          拾回是个人链接收藏与智能找回工具。看到有价值的内容时把链接交给它，
+          它在后台完成抓取、正文提取、摘要与索引；未来只要你描述还记得的内容，
+          就能从你自己的收藏里把原文找回来。
+        </p>
+        <p class="cta">
+          <a class="btn btn-primary" href="__APP_URL__">打开应用</a>
+        </p>
+      </section>
+
+      <section>
+        <h2>怎么用</h2>
+        <ol class="steps">
+          <li>
+            <div>
+              <strong>保存</strong>
+              <span>粘贴文章、视频或网站链接即可。不用填标题，不用分类，不用打标签。</span>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong>整理</strong>
+              <span>后台异步解析正文、生成摘要与关键词、建立全文与语义索引，页面上能看到处理状态。</span>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong>找回</strong>
+              <span>用一句自然语言描述你记得的大概内容，得到原文，以及「为什么找到它」。</span>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>怎么找回</h2>
+        <p>搜索时同时走四条通道，再按权重融合排序：</p>
+        <table>
+          <tbody>
+            <tr>
+              <th>全文匹配</th>
+              <td>记住英文关键词或正文里明确出现过的词</td>
+            </tr>
+            <tr>
+              <th>语义相似</th>
+              <td>措辞不同、意思相近也能召回（正文切分后建向量索引）</td>
+            </tr>
+            <tr>
+              <th>标题匹配</th>
+              <td>只记得标题里的词</td>
+            </tr>
+            <tr>
+              <th>来源信息</th>
+              <td>记得作者、公众号或域名</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          每条结果都会给出匹配原因与命中片段，全部来自真实命中的内容，不会编造文章里没有的东西。
+          搜索只查已经建好的索引，不会在查询时重新阅读全部收藏。
+        </p>
+      </section>
+
+      <section>
+        <h2>它不是什么</h2>
+        <ul>
+          <li>不是书签管理器：不需要你维护文件夹和标签。</li>
+          <li>不是知识库：不要求先整理、导入或建库。</li>
+          <li>不是笔记工具：不提供编辑器，正文按原样保存。</li>
+          <li>不是通用搜索引擎：只搜你保存过的内容，不混入互联网结果。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>边界与隐私</h2>
+        <ul>
+          <li>只搜你自己的账号下的收藏，不同用户之间互相看不到。</li>
+          <li>解析失败也保留原始链接，可随时打开原文或重新解析。</li>
+          <li>不绕过登录、付费墙或任何访问限制，不执行网页里的脚本与指令。</li>
+          <li>删除收藏会同时清理它的索引与后台任务，之后搜索不会再出现。</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>拾回 · 个人链接收藏与智能找回</span>
+      <a class="btn" href="__APP_URL__">打开应用</a>
+    </footer>
+  </body>
+</html>

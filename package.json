@@ -1,0 +1,32 @@
+{
+  "name": "recall",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "overrides": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "scripts": {
+    "dev": "npm run dev -w @recall/web",
+    "dev:landing": "npm run dev -w @recall/landing",
+    "dev:mobile": "npm run start -w @recall/mobile",
+    "mobile:ios": "npm run ios -w @recall/mobile",
+    "mobile:android": "npm run android -w @recall/mobile",
+    "mobile:typecheck": "npm run typecheck -w @recall/mobile",
+    "mobile:doctor": "npm run doctor -w @recall/mobile",
+    "mobile:export": "npm run export -w @recall/mobile",
+    "api:typecheck": "npm run typecheck -w @recall/api",
+    "build": "npm run build -w @recall/web && npm run build -w @recall/landing",
+    "preview": "npm run preview -w @recall/web",
+    "preview:landing": "npm run preview -w @recall/landing"
+  }
+}
