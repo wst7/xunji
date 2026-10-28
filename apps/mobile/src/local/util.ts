@@ -27,7 +27,8 @@ export function normalizeUrl(raw: string): string | null {
 
   const protocol = `${match[1].toLowerCase()}:`
   const host = match[2].toLowerCase()
-  if (!host.includes('.')) return null
+  // 域名要有后缀，但也允许 localhost 这类局域网地址。
+  if (!host.replace(/:\d+$/, '').includes('.') && !/^localhost(:\d+)?$/.test(host)) return null
 
   let path = match[3] || '/'
   const query = match[4] ?? ''
@@ -36,7 +37,16 @@ export function normalizeUrl(raw: string): string | null {
   const kept = query
     .split('&')
     .filter(Boolean)
-    .filter((pair) => !junk.test(decodeURIComponent(pair.split('=')[0] ?? '')))
+    .filter((pair) => {
+      const rawKey = pair.split('=')[0] ?? ''
+      let key = rawKey
+      try {
+        key = decodeURIComponent(rawKey)
+      } catch {
+        // 非法的百分号编码按原文判断，不能让整条链接保存失败。
+      }
+      return !junk.test(key)
+    })
 
   if (path.length > 1 && path.endsWith('/')) path = path.slice(0, -1)
   const search = kept.length > 0 ? `?${kept.join('&')}` : ''
