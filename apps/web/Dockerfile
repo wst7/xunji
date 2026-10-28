@@ -15,6 +15,12 @@ COPY apps/web ./apps/web
 RUN npm run build -w @xunji/web
 
 FROM nginx:1.27-alpine
-COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+
+# 反代目标在容器启动时由 nginx 官方镜像的 envsubst 机制注入。
+# compose 里服务名是 api；Northflank 上覆盖为内部服务地址（见 northflank.json）。
+ENV API_UPSTREAM=http://api:8000
+
+# .template 后缀是官方镜像约定的扫描入口，启动时渲染到 /etc/nginx/conf.d/
+COPY apps/web/nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 EXPOSE 80

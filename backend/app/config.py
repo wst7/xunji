@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +14,19 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://xunji:xunji@localhost:5432/xunji"
     app_secret: str = ""
     log_level: str = "INFO"
+
+    @field_validator("database_url")
+    @classmethod
+    def _normalize_database_url(cls, value: str) -> str:
+        """托管平台给的是 postgres://… 或 postgresql://…，统一补成 psycopg3 驱动。
+
+        SQLAlchemy 对裸 postgresql:// 会找 psycopg2；本服务只装 psycopg3，
+        不转换会导致启动时 ModuleNotFoundError。显式带驱动的 URL 原样保留。
+        """
+        for prefix in ("postgres://", "postgresql://"):
+            if value.startswith(prefix):
+                return "postgresql+psycopg://" + value[len(prefix) :]
+        return value
 
     # AI 摘要（openai 表示任意 OpenAI 兼容服务，含个人服务商/中转站/Ollama/vLLM）
     ai_provider: str = "extractive"  # extractive | openai | openai-compatible

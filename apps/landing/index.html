@@ -3,33 +3,67 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>寻迹 · Xunji — Save anything. Find it by memory.</title>
+    <title>寻迹 · Xunji — 存下任何链接，凭记忆找回</title>
     <meta
       name="description"
-      content="寻迹 (Xunji) 是个人链接收藏与智能找回工具：粘贴链接自动整理，未来用一句话把原文找回来。"
+      content="寻迹 (Xunji) 是个人链接收藏与智能找回工具：粘贴链接自动抓取正文、生成摘要与索引，之后用一句自然语言描述就能从自己的收藏里找回原文。免费，也可自己部署。"
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#f8f4ea" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="寻迹 · Xunji" />
+    <meta property="og:title" content="寻迹 · Xunji — 存下任何链接，凭记忆找回" />
+    <meta
+      property="og:description"
+      content="看到有价值的内容，把链接交给寻迹；未来用一句描述，从你自己的收藏里把原文找回来。"
+    />
+    <meta property="og:image" content="__SITE_URL__/shots/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="寻迹 · Xunji — 存下任何链接，凭记忆找回" />
+    <meta
+      name="twitter:description"
+      content="看到有价值的内容，把链接交给寻迹；未来用一句描述，从你自己的收藏里把原文找回来。"
     />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <header class="bar">
-      <span class="brand">寻迹 · Xunji</span>
+      <a class="brand" href="/">寻迹 · Xunji</a>
       <a class="btn" href="__APP_URL__">打开应用</a>
     </header>
 
     <main>
       <section class="intro">
-        <p class="tagline">Save anything. Find it by memory.</p>
-        <h1>你不需要记住收藏了什么，<br />只需要记住你想找什么。</h1>
-        <p>
-          寻迹是个人链接收藏与智能找回工具。看到有价值的内容时把链接交给它，
-          它在后台完成抓取、正文提取、摘要与索引；未来只要你描述还记得的内容，
-          就能从你自己的收藏里把原文找回来。
-        </p>
-        <p class="cta">
-          <a class="btn btn-primary" href="__APP_URL__">打开应用</a>
-        </p>
-      </section>
+        <div class="intro-copy">
+          <p class="tagline">Save anything. Find it by memory.</p>
+          <h1>你不需要记住收藏了什么，<br />只需要记住你想找什么。</h1>
+          <p class="lede">
+            看到有价值的内容，把链接交给寻迹。它在后台抓取正文、写摘要、建索引；几个月后你只要描述还记得的内容，就能把它找回来——不用分类，不用打标签。
+          </p>
+          <p class="cta">
+            <a class="btn btn-primary btn-lg" href="__APP_URL__/register">免费开始使用</a>
+          </p>
+          <ul class="assurances">
+            <li>注册只需要邮箱和密码</li>
+            <li>只搜你自己保存的内容</li>
+            <li>免费使用，也可以自己部署</li>
+          </ul>
+        </div>
 
+        <figure class="shot">
+          <img
+            src="/shots/search.webp"
+            width="780"
+            height="1168"
+            alt="在寻迹里输入「那篇讲注意力机制、提出 Transformer 的论文」后，搜到 arXiv 上的《Attention Is All You Need》；结果下方列出「为什么找到它」：命中的关键词、来源，以及正文里命中的原句。"
+            decoding="async"
+            fetchpriority="high"
+          />
+          <figcaption>
+            输入一句描述 → 找到原文，并被告知<strong>为什么是它</strong>：命中了哪个关键词、哪句话、哪个来源。
+          </figcaption>
+        </figure>
+      </section>
       <section>
         <h2>怎么用</h2>
         <ol class="steps">
@@ -52,10 +86,32 @@
             </div>
           </li>
         </ol>
+
+        <figure class="shot shot-inline">
+          <img
+            src="/shots/home.webp"
+            width="780"
+            height="746"
+            alt="寻迹首页的「最近收藏」：每条显示自动抓取的标题、摘要、来源域名与收藏时间，不需要自己填写。"
+            loading="lazy"
+            decoding="async"
+          />
+          <figcaption>保存就结束了。列表会自己长出标题和摘要，不需要你维护。</figcaption>
+        </figure>
       </section>
 
       <section>
-        <h2>怎么找回</h2>
+        <h2>它不是什么</h2>
+        <ul>
+          <li>不是书签管理器：不需要你维护文件夹和标签。</li>
+          <li>不是知识库：不要求先整理、导入或建库。</li>
+          <li>不是笔记工具：不提供编辑器，正文按原样保存。</li>
+          <li>不是通用搜索引擎：只搜你保存过的内容，不混入互联网结果。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>为什么找得回来</h2>
         <p>搜索时同时走四条通道，再按权重融合排序：</p>
         <table>
           <tbody>
@@ -84,16 +140,6 @@
       </section>
 
       <section>
-        <h2>它不是什么</h2>
-        <ul>
-          <li>不是书签管理器：不需要你维护文件夹和标签。</li>
-          <li>不是知识库：不要求先整理、导入或建库。</li>
-          <li>不是笔记工具：不提供编辑器，正文按原样保存。</li>
-          <li>不是通用搜索引擎：只搜你保存过的内容，不混入互联网结果。</li>
-        </ul>
-      </section>
-
-      <section>
         <h2>边界与隐私</h2>
         <ul>
           <li>只搜你自己的账号下的收藏，不同用户之间互相看不到。</li>
@@ -101,6 +147,15 @@
           <li>不绕过登录、付费墙或任何访问限制，不执行网页里的脚本与指令。</li>
           <li>删除收藏会同时清理它的索引与后台任务，之后搜索不会再出现。</li>
         </ul>
+      </section>
+
+      <section class="closing">
+        <h2>存下第一个链接</h2>
+        <p>粘贴任意文章链接，几秒后它就会被整理好。之后想找它，只需要一句描述。</p>
+        <p class="cta">
+          <a class="btn btn-primary btn-lg" href="__APP_URL__/register">免费开始使用</a>
+        </p>
+        <p class="closing-note">已经有账号？<a href="__APP_URL__/login">直接登录</a></p>
       </section>
     </main>
 

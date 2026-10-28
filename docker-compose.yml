@@ -73,6 +73,7 @@ services:
       dockerfile: apps/landing/Dockerfile
       args:
         XUNJI_APP_URL: http://localhost:3000
+        XUNJI_SITE_URL: http://localhost:3001
     ports:
       - "3001:80"
     restart: unless-stopped

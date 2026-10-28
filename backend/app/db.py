@@ -70,14 +70,24 @@ def _dsn(url: str) -> str:
     return url.replace("postgresql+psycopg://", "postgresql://").replace("postgresql+asyncpg://", "postgresql://")
 
 
+# 迁移互斥锁的事务级 advisory lock ID（任意常量，保证全库唯一即可）。
+# 托管平台上 API 与被重新调度的副本可能同时启动，没有这把锁会并发建表。
+MIGRATION_LOCK_ID = 727_001
+
+
 def run_migrations() -> list[str]:
-    """顺序执行 migrations/*.sql，记录到 schema_migrations；整体幂等。"""
+    """顺序执行 migrations/*.sql，记录到 schema_migrations；整体幂等。
+
+    整个迁移过程持有事务级 advisory lock：并发启动的进程会在这里排队，
+    后到的进程拿到锁时前面的迁移已提交，于是自然跳过。
+    """
     settings = get_settings()
     dim = str(settings.embedding_dim)
     applied: list[str] = []
     dsn = _dsn(settings.database_url)
     with psycopg.connect(dsn) as conn:
         with conn.cursor() as cur:
+            cur.execute("SELECT pg_advisory_xact_lock(%s)", (MIGRATION_LOCK_ID,))
             cur.execute(
                 "CREATE TABLE IF NOT EXISTS schema_migrations("
                 "version text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())"

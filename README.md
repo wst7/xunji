@@ -134,6 +134,15 @@ iOS 端目前只验证了 TypeScript、Expo 配置、JS bundle 与 prebuild；�
 
 ### 安装到 Android 手机
 
+**不装 Android Studio 也能出包**：`.github/workflows/android.yml` 在 GitHub 上构建
+release APK（arm64，JS 已打进包，可独立运行）。前提是在仓库
+Settings → Secrets and variables → Actions → Variables 里设置
+`XUNJI_API_BASE_URL=https://<web 域名>/api/v1`（必须是 HTTPS）。然后推送代码或在
+Actions 页手动运行，产物在运行页的 Artifacts 里（`xunji-apk-<sha>`）。
+签名用的是 RN/Expo 模板自带的 debug 密钥，够自己安装，**不能上架**。
+
+本机构建：
+
 ```bash
 # 构建（只需 arm64，覆盖绝大多数在售安卓机）
 cd apps/mobile/android
@@ -164,8 +173,9 @@ xunji/
 ├── packages/shared/     # 跨端共享：API 契约类型 + 平台无关的格式化/错误逻辑（@xunji/shared）
 ├── packages/api/        # 跨端 HTTP 传输：createApiClient、超时、信封解析（@xunji/api）
 ├── backend/             # FastAPI + Worker + 迁移 + 测试
-├── docs/                # PRODUCT.md、ENGINEERING.md
+├── docs/                # PRODUCT.md、ENGINEERING.md、DEPLOY_NORTHFLANK.md
 ├── docker-compose.yml
+├── northflank.json      # Northflank 模板：GitHub 构建 + 部署 API / Worker / Web
 └── package.json         # npm workspaces 根
 ```
 
@@ -175,9 +185,25 @@ xunji/
 
 说明页是独立站点，不进入应用：应用内没有产品介绍页面，说明内容只放在 landing。
 应用地址在构建时注入——开发默认 `http://localhost:5173`，Docker 构建通过
-`XUNJI_APP_URL` 传入（`docker-compose.yml` 中为 `http://localhost:3000`）。
+`XUNJI_APP_URL` 传入（`docker-compose.yml` 中为 `http://localhost:3000`）；
+分享预览图（`og:image`）需要绝对地址，由 `XUNJI_SITE_URL` 注入，默认
+`http://localhost:5174`（compose 中为 `http://localhost:3001`）。说明页里的产品截图
+存放在 `apps/landing/public/shots/`，是用真实数据从运行中的应用截取的，改动界面后需要重截。
 
 首次使用：打开前端 → 注册 → 粘贴链接或包含链接的分享文字保存 → 等状态变为「已完成整理」→ 搜索。
+
+## 部署到 Northflank
+
+`northflank.json` 是一份 Northflank 模板：从 GitHub 构建后端镜像，创建 PostgreSQL 16、
+API、Worker 与 Web 前端（Nginx 托管前端并反代 `/api/`）。导入与后续校验步骤见
+[`docs/DEPLOY_NORTHFLANK.md`](docs/DEPLOY_NORTHFLANK.md)。
+
+要点：
+
+- 仓库必须是 Northflank 能读到的 GitHub 仓库，分支 `main`；模板用账号里已链接的 GitHub 凭据构建。
+- 密钥由模板生成或从数据库 addon 注入，**不写进 `northflank.json`**。
+- 只有 Web 有公网域名；API 走内部网络 `http://xunji-api:8000`，前端与 API 同源。
+- 手机 App 的生产 `EXPO_PUBLIC_API_BASE_URL` 指向 `https://<web 域名>/api/v1`。
 
 ## 配置
 

@@ -14,7 +14,7 @@ import uuid
 
 from app.ai.pipeline import process_document
 from app.config import Settings, get_settings
-from app.db import session_scope
+from app.db import run_migrations, session_scope
 from app.errors import FatalJobError, RetryableJobError
 from app.logging import get_logger, setup_logging
 from app.models import Document, ProcessingJob
@@ -127,6 +127,13 @@ def main(argv: list[str] | None = None) -> int:
     settings = get_settings()
     setup_logging(settings.log_level)
     worker_id = f"{socket.gethostname()}:{os.getpid()}"
+
+    # 托管平台上 worker 与 API 各自独立启动，且 worker 可能先就绪。
+    # run_once 第一件事就是 reclaim_stale，表不存在会直接让循环崩掉，
+    # 所以这里先自己跑一遍迁移（幂等；advisory lock 保证与 API 并发时不会重复建表）。
+    applied = run_migrations()
+    if applied:
+        logger.info("worker_migrations_applied", extra={"migrations": applied})
 
     global _stop
     _stop = False

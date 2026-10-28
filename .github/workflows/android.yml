@@ -1,0 +1,101 @@
+name: Android APK
+
+# 从 GitHub 上的代码直接构建可安装的 Android APK（arm64，release，JS 已打进包）。
+# 产物在 Actions 运行页的 Artifacts 里；手机浏览器不方便下载时，可在电脑上下载后传到手机。
+#
+# 构建前需要设置一个仓库变量（Settings → Secrets and variables → Actions → Variables）：
+#   XUNJI_API_BASE_URL = https://<Northflank web 域名>/api/v1
+# 必须是 HTTPS：这个工作流用 APP_VARIANT=production 构建，客户端不允许明文 HTTP。
+#
+# 这里签的是 RN/Expo 模板自带的 debug 密钥，够个人安装使用；要上 Google Play
+# 或用 EAS 正式签名，请走 apps/mobile 的 EAS 流程，不要用这份产物。
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CI: '1'
+      APP_VARIANT: production
+      EXPO_PUBLIC_API_BASE_URL: ${{ vars.XUNJI_API_BASE_URL }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 校验 API 地址
+        run: |
+          if [ -z "${EXPO_PUBLIC_API_BASE_URL}" ]; then
+            echo "::error::仓库变量 XUNJI_API_BASE_URL 未设置。请在 Settings → Secrets and variables → Actions → Variables 里填 https://<web 域名>/api/v1 后重跑。"
+            exit 1
+          fi
+          case "$EXPO_PUBLIC_API_BASE_URL" in
+            https://*) ;;
+            *)
+              echo "::error::XUNJI_API_BASE_URL 必须以 https:// 开头（生产构建不允许明文 HTTP），当前值：$EXPO_PUBLIC_API_BASE_URL"
+              exit 1
+              ;;
+          esac
+          echo "API base: $EXPO_PUBLIC_API_BASE_URL"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: 安装依赖
+        run: npm ci
+
+      # runner 自带 Android SDK；这里只接受许可，让 Gradle 需要时自行补装缺失的 platform。
+      - name: 接受 Android SDK 许可
+        run: yes | sdkmanager --licenses > /dev/null || true
+
+      - name: 类型检查
+        run: npm run mobile:typecheck
+
+      - name: 生成原生工程
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform android --no-install
+
+      - name: 构建 release APK
+        working-directory: apps/mobile/android
+        # 只打 arm64-v8a：覆盖绝大多数在售安卓机，构建更快、包更小。
+        # 需要 32 位或模拟器时去掉这个参数（或改成 arm64-v8a,x86_64）。
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
+
+      - name: 重命名产物
+        run: |
+          src=$(ls apps/mobile/android/app/build/outputs/apk/release/*.apk | head -n1)
+          out="xunji-${GITHUB_SHA::7}-arm64.apk"
+          cp "$src" "$out"
+          echo "APK: $out ($(du -h "$out" | cut -f1))"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xunji-apk-${{ github.sha }}
+          path: xunji-*-arm64.apk
+          if-no-files-found: error
+          retention-days: 30

@@ -12,7 +12,7 @@
   --ink: #26231e;
   --ink-soft: #4a453b;
   --muted: #716958;
-  --faint: #9a917f;
+  --inert: #756d5f;
   --line: #e3dac8;
   --line-strong: #d5c9b2;
   --accent: #a0432e;
@@ -98,6 +98,10 @@ h2 {
   letter-spacing: 0.02em;
 }
 
+a.brand:hover {
+  color: var(--ink);
+}
+
 /* 与应用顶栏一致：赭红一点 */
 .brand::after {
   content: '.';
@@ -127,6 +131,7 @@ h2 {
   background: var(--surface);
   color: var(--ink);
   font-size: 0.95rem;
+  line-height: 1.5;
 }
 
 .btn:hover {
@@ -145,6 +150,25 @@ h2 {
   background: var(--accent-deep);
   border-color: var(--accent-deep);
   color: var(--surface);
+}
+
+/* 主行动：移动端留足 44px 触控高度 */
+.btn-lg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 12px 30px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+@media (max-width: 600px) {
+  .btn-lg {
+    display: flex;
+    width: 100%;
+  }
 }
 
 /* ---------- 正文 ---------- */
@@ -181,8 +205,72 @@ h2 {
   color: var(--ink-soft);
 }
 
+.intro .lede {
+  font-size: 1.08rem;
+  line-height: 1.75;
+}
+
 .cta {
-  margin-top: 26px;
+  margin: 26px 0 0;
+}
+
+.intro .assurances {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+.intro .assurances li {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.intro .assurances li::before {
+  content: '·';
+  color: var(--accent);
+  font-size: 1.2em;
+  line-height: 1;
+}
+
+/* 真实界面截图 */
+.shot {
+  margin: 34px 0 0;
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  max-width: 390px;
+  height: auto;
+  margin: 0 auto;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(56, 44, 24, 0.1);
+}
+
+.shot-inline {
+  margin-top: 24px;
+}
+
+.shot figcaption {
+  margin-top: 12px;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--muted);
+  text-align: center;
+}
+
+.shot figcaption strong {
+  color: var(--ink-soft);
+  font-weight: 600;
 }
 
 section + section {
@@ -205,7 +293,7 @@ li {
 }
 
 li::marker {
-  color: var(--faint);
+  color: var(--inert);
 }
 
 /* 三步用法：真实的先后顺序，才用序号 */
@@ -281,6 +369,64 @@ tr:last-child td {
   border-bottom: none;
 }
 
+/* 结尾的行动区 */
+.closing {
+  border-top: 1px solid var(--line);
+}
+
+.closing p {
+  color: var(--ink-soft);
+}
+
+.closing .cta {
+  margin-top: 22px;
+}
+
+.closing-note {
+  margin: 14px 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.closing-note a {
+  display: inline-block;
+  padding: 10px 4px;
+  margin: -10px -4px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* 宽屏：首屏两栏，文案在左、真实界面在右 */
+@media (min-width: 900px) {
+  main {
+    max-width: 980px;
+  }
+
+  .site-footer {
+    max-width: 980px;
+  }
+
+  .intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 52px;
+    align-items: center;
+  }
+
+  .intro h1 {
+    font-size: 2.3rem;
+  }
+
+  .intro .shot {
+    margin-top: 6px;
+  }
+
+  /* 截图按 340px 宽等比缩放，完整露出「搜索 → 结果 → 为什么找到它」 */
+  .intro .shot img {
+    max-width: 340px;
+  }
+}
+
 @media (max-width: 600px) {
   h1 {
     font-size: 1.5rem;
@@ -294,9 +440,27 @@ tr:last-child td {
     padding: 12px 18px;
   }
 
+  /* 触控目标不小于 44px */
+  .bar .brand,
+  .bar .btn,
+  .site-footer .btn {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 8px 16px;
+  }
+
+  .bar .brand {
+    padding: 8px 0;
+  }
+
   .site-footer {
     padding: 18px 18px 44px;
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .shot {
+    margin-top: 26px;
   }
 }

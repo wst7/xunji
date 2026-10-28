@@ -110,9 +110,10 @@ xunji/
 │   │   ├── metro.config.js  # monorepo watchFolders + nodeModulesPaths
 │   │   └── tsconfig.json
 │   └── landing/              # @xunji/landing：纯静态说明页（无框架），
-│                             # dev 5174，构建时注入 XUNJI_APP_URL
+│                             # dev 5174，构建时注入 XUNJI_APP_URL / XUNJI_SITE_URL
 │       ├── package.json
-│       ├── vite.config.ts    # transformIndexHtml 替换 __APP_URL__
+│       ├── vite.config.ts    # transformIndexHtml 替换 __APP_URL__ / __SITE_URL__
+│       ├── public/shots/     # 真实产品截图（搜索页 / 首页 / og 分享图）
 │       ├── index.html
 │       ├── styles.css
 │       └── Dockerfile        # 构建上下文必须是仓库根目录
