@@ -11,8 +11,8 @@ import {
   View,
 } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
-import type { DocumentSummary, ParseStatus, SearchResult } from '@recall/shared'
-import { ApiError, errorMessage, STATUS_TEXT } from '@recall/shared'
+import type { DocumentSummary, ParseStatus, SearchResult } from '@xunji/shared'
+import { ApiError, errorMessage, STATUS_TEXT } from '@xunji/shared'
 
 import { api } from '../api/client'
 import { savePendingShare } from '../auth/pendingShare'
@@ -30,7 +30,7 @@ import { useOutbox } from '../providers/OutboxProvider'
 import { colors, spacing, type } from '../theme'
 
 const RECENT_COUNT = 6
-const APP_NAME = '拾回'
+const APP_NAME = '寻迹'
 
 function terminalToastContent(status: ParseStatus): {
   message: string
@@ -175,6 +175,7 @@ export function HomeScreen() {
           </View>
 
           <View style={styles.hero}>
+            <Text style={styles.heroEyebrow}>Save anything. Find it by memory.</Text>
             <Text style={styles.heroTitle}>
               今天想<Text style={styles.heroEm}>找</Text>点什么？
             </Text>
@@ -308,6 +309,14 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
     paddingBottom: spacing.xl,
     gap: spacing.sm,
+  },
+  heroEyebrow: {
+    ...type.caption,
+    fontSize: 11,
+    letterSpacing: 0.9,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    color: colors.accent,
   },
   heroTitle: {
     ...type.display,

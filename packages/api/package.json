@@ -1,5 +1,5 @@
 {
-  "name": "@recall/api",
+  "name": "@xunji/api",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@recall/shared": "*"
+    "@xunji/shared": "*"
   },
   "devDependencies": {
     "typescript": "^5.5.4"

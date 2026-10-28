@@ -1,4 +1,4 @@
-import { ApiError } from '@recall/shared'
+import { ApiError } from '@xunji/shared'
 
 import { api } from '../api/client'
 import { getCachedToken } from '../auth/tokenStore'

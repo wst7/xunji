@@ -18,7 +18,7 @@ from app.parsers.base import (
     parse_datetime,
 )
 
-logger = get_logger("recall.parsers.generic")
+logger = get_logger("xunji.parsers.generic")
 
 _ARTICLE_JSON_LD = {"Article", "NewsArticle", "BlogPosting", "WebPage", "TechArticle"}
 

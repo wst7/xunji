@@ -1,4 +1,4 @@
--- Recall 初始 schema（与 docs/ENGINEERING.md 第 4 节一致）
+-- Xunji 初始 schema（与 docs/ENGINEERING.md 第 4 节一致）
 -- {{EMBEDDING_DIM}} 由 app/db.py::run_migrations() 替换为 settings.embedding_dim
 
 CREATE EXTENSION IF NOT EXISTS vector;

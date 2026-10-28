@@ -14,7 +14,7 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from app.config import get_settings
 from app.logging import get_logger
 
-logger = get_logger("recall.db")
+logger = get_logger("xunji.db")
 
 MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
 

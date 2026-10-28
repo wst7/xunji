@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import type { User } from '@recall/shared'
-import { ApiError } from '@recall/shared'
+import type { User } from '@xunji/shared'
+import { ApiError } from '@xunji/shared'
 
 import { api } from '../api/client'
 import { onUnauthorized } from './sessionEvents'

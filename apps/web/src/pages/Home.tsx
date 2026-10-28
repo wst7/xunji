@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../api/client'
-import type { DocumentSummary, ParseStatus, SearchResult } from '@recall/shared'
-import { errorMessage, isValidHttpUrl, STATUS_TEXT } from '@recall/shared'
+import type { DocumentSummary, ParseStatus, SearchResult } from '@xunji/shared'
+import { errorMessage, isValidHttpUrl, STATUS_TEXT } from '@xunji/shared'
 import { SearchBox } from '../components/SearchBox'
 import { SaveBox } from '../components/SaveBox'
 import { DocumentSummaryCard, SearchResultCard } from '../components/DocumentCard'
@@ -92,6 +92,7 @@ export default function Home() {
   return (
     <div className="page">
       <section className="hero">
+        <p className="hero-eyebrow">Save anything. Find it by memory.</p>
         <h1 className="hero-title">
           <span className="hero-line">你只需要记得，</span>
           <span className="hero-line">
@@ -136,7 +137,7 @@ export default function Home() {
           </div>
           {recentError && <div className="notice notice--error">{recentError}</div>}
           {recent.length === 0 && !recentError ? (
-            <div className="empty-state">还没有收藏。粘贴第一个链接或一段分享文字，拾回会自动整理。</div>
+            <div className="empty-state">还没有收藏。粘贴第一个链接或一段分享文字，寻迹会自动整理。</div>
           ) : (
             <div className="list">
               {recent.map((doc) => (

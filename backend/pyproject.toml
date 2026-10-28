@@ -1,7 +1,7 @@
 [project]
-name = "recall-backend"
+name = "xunji-backend"
 version = "0.1.0"
-description = "Recall backend: personal link recall engine"
+description = "Xunji backend: personal link recall engine"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115",

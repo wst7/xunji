@@ -10,8 +10,8 @@ import type {
   ReprocessResponse,
   SearchResponse,
   User,
-} from '@recall/shared'
-import { ApiError, FRIENDLY_MESSAGES } from '@recall/shared'
+} from '@xunji/shared'
+import { ApiError, FRIENDLY_MESSAGES } from '@xunji/shared'
 
 const DEFAULT_TIMEOUT_MS = 15_000
 const NETWORK_FALLBACK = '网络连接失败，请稍后重试。'

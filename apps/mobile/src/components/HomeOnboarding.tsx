@@ -7,7 +7,7 @@ const STEPS = [
   {
     icon: 'link-outline' as const,
     title: '保存一个链接',
-    body: '粘贴到上面的输入框，或在浏览器、微信里直接分享到拾回。',
+    body: '粘贴到上面的输入框，或在浏览器、微信里直接分享到寻迹。',
   },
   {
     icon: 'sparkles-outline' as const,
@@ -25,7 +25,7 @@ const STEPS = [
 export function HomeOnboarding() {
   return (
     <View style={styles.card}>
-      <Text style={styles.heading}>三件事，就能用好拾回</Text>
+      <Text style={styles.heading}>三件事，就能用好寻迹</Text>
       <View style={styles.steps}>
         {STEPS.map((step, index) => (
           <View key={step.title} style={styles.step}>

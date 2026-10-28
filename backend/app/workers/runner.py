@@ -20,7 +20,7 @@ from app.logging import get_logger, setup_logging
 from app.models import Document, ProcessingJob
 from app.workers import queue
 
-logger = get_logger("recall.worker")
+logger = get_logger("xunji.worker")
 
 # 未知异常的兜底错误码（契约错误码表内）
 UNEXPECTED_ERROR_CODE = "PARSE_ERROR"
@@ -120,7 +120,7 @@ def run_once(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Recall 文档处理 Worker")
+    parser = argparse.ArgumentParser(description="Xunji 文档处理 Worker")
     parser.add_argument("--once", action="store_true", help="只处理一个任务（无任务则直接退出）")
     args = parser.parse_args(argv)
 

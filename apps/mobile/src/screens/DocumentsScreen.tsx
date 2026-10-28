@@ -11,8 +11,8 @@ import {
   View,
 } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
-import type { DocumentSummary, ParseStatus } from '@recall/shared'
-import { errorMessage, STATUS_TEXT } from '@recall/shared'
+import type { DocumentSummary, ParseStatus } from '@xunji/shared'
+import { errorMessage, STATUS_TEXT } from '@xunji/shared'
 
 import { api } from '../api/client'
 import { AppTabBar } from '../components/AppTabBar'
@@ -25,7 +25,7 @@ import { useToast } from '../providers/ToastProvider'
 import { colors, radius, shadow, spacing, type } from '../theme'
 
 const PAGE_SIZE = 20
-const APP_NAME = '拾回'
+const APP_NAME = '寻迹'
 
 export function DocumentsScreen() {
   const router = useRouter()

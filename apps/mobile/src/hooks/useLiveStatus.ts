@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AppState } from 'react-native'
-import type { ParseStatus } from '@recall/shared'
-import { isTerminalStatus } from '@recall/shared'
+import type { ParseStatus } from '@xunji/shared'
+import { isTerminalStatus } from '@xunji/shared'
 
 import { api } from '../api/client'
 

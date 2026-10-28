@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons'
-import type { DocumentSummary, SearchResult } from '@recall/shared'
-import { domainOf, formatRelativeDate, sourceLabel, SOURCE_TYPE_LABELS } from '@recall/shared'
+import type { DocumentSummary, SearchResult } from '@xunji/shared'
+import { domainOf, formatRelativeDate, sourceLabel, SOURCE_TYPE_LABELS } from '@xunji/shared'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { colors, radius, shadow, spacing, type } from '../theme'

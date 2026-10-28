@@ -50,9 +50,9 @@ export function AuthForm({
     <div className="auth-page">
       <div className="auth-brand">
         <Link to="/" className="auth-brand-name">
-          拾回
+          寻迹 · Xunji
         </Link>
-        <p className="auth-tagline">你只需要记得，你想找什么。</p>
+        <p className="auth-tagline">Save anything. Find it by memory.</p>
       </div>
       <div className="auth-card">
         <h1 className="auth-title">{title}</h1>

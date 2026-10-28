@@ -1,5 +1,5 @@
 {
-  "name": "recall",
+  "name": "xunji",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -16,17 +16,17 @@
     "react-dom": "19.3.0"
   },
   "scripts": {
-    "dev": "npm run dev -w @recall/web",
-    "dev:landing": "npm run dev -w @recall/landing",
-    "dev:mobile": "npm run start -w @recall/mobile",
-    "mobile:ios": "npm run ios -w @recall/mobile",
-    "mobile:android": "npm run android -w @recall/mobile",
-    "mobile:typecheck": "npm run typecheck -w @recall/mobile",
-    "mobile:doctor": "npm run doctor -w @recall/mobile",
-    "mobile:export": "npm run export -w @recall/mobile",
-    "api:typecheck": "npm run typecheck -w @recall/api",
-    "build": "npm run build -w @recall/web && npm run build -w @recall/landing",
-    "preview": "npm run preview -w @recall/web",
-    "preview:landing": "npm run preview -w @recall/landing"
+    "dev": "npm run dev -w @xunji/web",
+    "dev:landing": "npm run dev -w @xunji/landing",
+    "dev:mobile": "npm run start -w @xunji/mobile",
+    "mobile:ios": "npm run ios -w @xunji/mobile",
+    "mobile:android": "npm run android -w @xunji/mobile",
+    "mobile:typecheck": "npm run typecheck -w @xunji/mobile",
+    "mobile:doctor": "npm run doctor -w @xunji/mobile",
+    "mobile:export": "npm run export -w @xunji/mobile",
+    "api:typecheck": "npm run typecheck -w @xunji/api",
+    "build": "npm run build -w @xunji/web && npm run build -w @xunji/landing",
+    "preview": "npm run preview -w @xunji/web",
+    "preview:landing": "npm run preview -w @xunji/landing"
   }
 }

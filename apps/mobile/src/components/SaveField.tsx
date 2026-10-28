@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons'
 import { useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
-import { extractHttpUrl, isValidHttpUrl } from '@recall/shared'
+import { extractHttpUrl, isValidHttpUrl } from '@xunji/shared'
 
 import { colors, radius, shadow, spacing, type } from '../theme'
 

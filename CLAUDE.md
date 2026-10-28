@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-拾回 (Shihui) is a personal link collection and recall tool: save a URL, and a background worker fetches it, extracts the article, summarizes and indexes it. Later, a natural-language description retrieves the original from the user's own collection and explains why it matched.
+寻迹 · Xunji (Save anything. Find it by memory.) is a personal link collection and recall tool: save a URL, and a background worker fetches it, extracts the article, summarizes and indexes it. Later, a natural-language description retrieves the original from the user's own collection and explains why it matched.
 
 - `docs/PRODUCT.md` — product positioning, principles, scenarios and scope.
 - `docs/ENGINEERING.md` — engineering contract: API paths, database DDL, module signatures, status/error enums. Backend, API, database and frontend sections are authoritative.
@@ -34,10 +34,10 @@ Tests use a real PostgreSQL database, not mocks:
 ```bash
 .venv/bin/python -m pytest -q
 .venv/bin/python -m pytest tests/test_search.py::test_chinese_full_sentence_query -q
-RECALL_TEST_DB=recall_test_search .venv/bin/python -m pytest -q   # parallel-safe database
+XUNJI_TEST_DB=xunji_test_search .venv/bin/python -m pytest -q   # parallel-safe database
 ```
 
-`tests/conftest.py` sets `DATABASE_URL` to `recall_test` before importing app modules, creates the database if missing, runs migrations, and truncates all business tables between tests. The local PostgreSQL role/database must exist and provide `vector`, `pg_trgm`, and `pgcrypto`. There is no backend lint or format script configured.
+`tests/conftest.py` sets `DATABASE_URL` to `xunji_test` before importing app modules, creates the database if missing, runs migrations, and truncates all business tables between tests. The local PostgreSQL role/database must exist and provide `vector`, `pg_trgm`, and `pgcrypto`. There is no backend lint or format script configured.
 
 ### Frontend — run from the repository root (npm workspaces)
 
@@ -49,7 +49,7 @@ npm run dev:landing    # static landing page on 5174
 npm run build          # tsc + vite for web, then builds landing
 ```
 
-If port 8000 is occupied by another API: `RECALL_API_TARGET=http://127.0.0.1:8010 npm run dev`. There is no frontend test runner or lint script; `tsc` (strict, `noUnusedLocals`) during `npm run build` is the type check.
+If port 8000 is occupied by another API: `XUNJI_API_TARGET=http://127.0.0.1:8010 npm run dev`. There is no frontend test runner or lint script; `tsc` (strict, `noUnusedLocals`) during `npm run build` is the type check.
 
 ### Mobile app — `apps/mobile` (standalone iOS + Android, Expo)
 
@@ -96,16 +96,16 @@ The backend is **synchronous** SQLAlchemy 2.0 (`psycopg` v3); do not introduce a
 
 React 19 + Vite + react-router-dom, no component library and no CSS framework. The whole visual system lives in `apps/web/src/styles.css` (warm-paper palette, serif headings, rust accent, hairline lists). Do not reintroduce Tailwind or a component library. Markdown is rendered by a custom restricted renderer (`components/Markdown.tsx`); raw HTML is never injected.
 
-`packages/api/src/index.ts` provides `createApiClient` (`@recall/api`): path/query building, bearer injection, the 15s timeout, `{data}` unwrapping, error-envelope parsing, and the 401 callback shared by both clients. The adapters in `apps/web/src/api/client.ts` and `apps/mobile/src/api/client.ts` only supply the base URL, token access and platform 401 side effects. `/health` is the only endpoint returning a bare object; `DELETE` returns 204. Status polling (`LiveStatusBadge`) runs every 1.5s only for non-terminal documents and stops at `completed | partial | failed`.
+`packages/api/src/index.ts` provides `createApiClient` (`@xunji/api`): path/query building, bearer injection, the 15s timeout, `{data}` unwrapping, error-envelope parsing, and the 401 callback shared by both clients. The adapters in `apps/web/src/api/client.ts` and `apps/mobile/src/api/client.ts` only supply the base URL, token access and platform 401 side effects. `/health` is the only endpoint returning a bare object; `DELETE` returns 204. Status polling (`LiveStatusBadge`) runs every 1.5s only for non-terminal documents and stops at `completed | partial | failed`.
 
-`packages/shared/src/index.ts` holds the API contract types consumed by both clients; `format.ts` / `errors.ts` hold platform-neutral labels and helpers (`STATUS_TEXT`, `statusTone`, `isTerminalStatus`, `domainOf`, date formatting, URL extraction, `ApiError`, friendly messages). Web and mobile must both import from `@recall/shared`; do not fork these maps. Keep the contract aligned with `backend/app/schemas.py`.
+`packages/shared/src/index.ts` holds the API contract types consumed by both clients; `format.ts` / `errors.ts` hold platform-neutral labels and helpers (`STATUS_TEXT`, `statusTone`, `isTerminalStatus`, `domainOf`, date formatting, URL extraction, `ApiError`, friendly messages). Web and mobile must both import from `@xunji/shared`; do not fork these maps. Keep the contract aligned with `backend/app/schemas.py`.
 
 ### Mobile app
 
 `apps/mobile` is a standalone Expo / React Native client (iOS + Android) of the same `/api/v1`; it is not a PWA and needs no backend changes or CORS. Expo Router has no tab navigator: `components/AppTabBar.tsx` provides the 首页 / 收藏 / 我的 bottom bar on the three top-level screens (`router.replace`), while detail, share, login and register are plain pushed screens.
 
 - The bearer token lives only in `expo-secure-store`; AsyncStorage holds the cached user, the URL-only outbox, and an unauthenticated pending share. Never put the token in AsyncStorage or logs.
-- `src/api/client.ts` configures the shared `@recall/api` client with an absolute base URL, waits for the SecureStore token load inside `getToken`, and on 401 (except login/register) clears the token and emits an unauthorized event. The shared core owns the 15s timeout, `{data}` / `{error}` parsing and endpoint definitions.
+- `src/api/client.ts` configures the shared `@xunji/api` client with an absolute base URL, waits for the SecureStore token load inside `getToken`, and on 401 (except login/register) clears the token and emits an unauthorized event. The shared core owns the 15s timeout, `{data}` / `{error}` parsing and endpoint definitions.
 - The outbox (`src/storage/outboxStore.ts`, `src/outbox/flush.ts`) is per-user, capped at 50 URLs, deduped client-side, and flushed single-flight/sequentially on login, boot, foreground, focus, retry, and a 60s foreground timer. Network/5xx keep items; success/duplicate/permanent 4xx remove them; 401 stops and defers to auth.
 - System share uses `expo-share-intent` (iOS Share Extension, Android `ACTION_SEND`), so it only works in a development build, not Expo Go. `ShareIntentBridge` skips it in Expo Go. The native payload is reset before any async save; logged-out shares are stored and consumed after login.
 - UI lives in `apps/mobile/src` (screens, components, theme), with thin route files in `app/`. `theme.ts` is a **deliberately separate** mobile design language (cool-neutral canvas, white cards, indigo accent, system sans) — it does not mirror `apps/web/src/styles.css`, and changing one does not require changing the other. Markdown uses an RN restricted renderer, never a WebView or raw HTML.
@@ -113,4 +113,4 @@ React 19 + Vite + react-router-dom, no component library and no CSS framework. T
 
 ### Deployment
 
-The web app is built by `apps/web/Dockerfile` (build context must be the repo root) and served by Nginx, which proxies `/api/` to the API service and falls back to `index.html` for SPA routes. The landing page is a separate static site — it is not part of the app; its Docker build injects `RECALL_APP_URL` into `__APP_URL__` at build time. The mobile app is not part of Docker Compose; it ships through Xcode / Android Studio / EAS Build, and its share extension requires a development build.
+The web app is built by `apps/web/Dockerfile` (build context must be the repo root) and served by Nginx, which proxies `/api/` to the API service and falls back to `index.html` for SPA routes. The landing page is a separate static site — it is not part of the app; its Docker build injects `XUNJI_APP_URL` into `__APP_URL__` at build time. The mobile app is not part of Docker Compose; it ships through Xcode / Android Studio / EAS Build, and its share extension requires a development build.

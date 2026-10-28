@@ -4,10 +4,10 @@ import type { ExpoConfig } from 'expo/config'
 const isProduction = process.env.APP_VARIANT === 'production'
 
 const config: ExpoConfig = {
-  name: '拾回',
-  slug: 'shihui',
+  name: '寻迹',
+  slug: 'xunji',
   version: '0.1.0',
-  scheme: 'shihui',
+  scheme: 'xunji',
   platforms: ['ios', 'android'],
   orientation: 'portrait',
   icon: './assets/icon.png',
@@ -15,9 +15,9 @@ const config: ExpoConfig = {
   backgroundColor: '#F5F6F8',
   ios: {
     supportsTablet: false,
-    bundleIdentifier: 'com.shihui.app',
+    bundleIdentifier: 'com.xunji.app',
     infoPlist: {
-      NSLocalNetworkUsageDescription: '拾回需要访问局域网内的服务器，以保存和找回你的收藏。',
+      NSLocalNetworkUsageDescription: '寻迹需要访问局域网内的服务器，以保存和找回你的收藏。',
       ...(isProduction
         ? {}
         : {
@@ -28,7 +28,7 @@ const config: ExpoConfig = {
     },
   },
   android: {
-    package: 'com.shihui.app',
+    package: 'com.xunji.app',
     predictiveBackGestureEnabled: false,
     adaptiveIcon: {
       backgroundColor: '#F5F6F8',

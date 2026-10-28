@@ -10,14 +10,14 @@ import {
   View,
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import type { DocumentDetail, ParseStatus, RelatedItem } from '@recall/shared'
+import type { DocumentDetail, ParseStatus, RelatedItem } from '@xunji/shared'
 import {
   domainOf,
   errorMessage,
   formatDate,
   sourceLabel,
   SOURCE_TYPE_LABELS,
-} from '@recall/shared'
+} from '@xunji/shared'
 
 import { api } from '../api/client'
 import { LiveStatusBadge } from '../components/LiveStatusBadge'

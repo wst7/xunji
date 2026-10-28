@@ -1,6 +1,6 @@
-# 拾回工程契约（ENGINEERING）
+# 寻迹工程契约（ENGINEERING）
 
-本文是拾回的工程实现契约。所有实现必须遵守这里的文件路径、函数签名、数据结构和 API 契约。
+本文是寻迹的工程实现契约。所有实现必须遵守这里的文件路径、函数签名、数据结构和 API 契约。
 产品定位与边界见 `docs/PRODUCT.md`；涉及实现细节时以本文为准。
 
 ---
@@ -8,7 +8,7 @@
 ## 1. 仓库结构
 
 ```text
-recall/
+xunji/
 ├── docs/PRODUCT.md
 ├── docs/ENGINEERING.md
 ├── README.md
@@ -78,9 +78,9 @@ recall/
 ├── package.json             # npm workspaces 根（apps/*、packages/*）
 ├── package-lock.json
 ├── apps/
-│   ├── web/                 # @recall/web：React + Vite 应用（用户实际使用的界面）
+│   ├── web/                 # @xunji/web：React + Vite 应用（用户实际使用的界面）
 │       ├── package.json
-│       ├── vite.config.ts   # dev 代理 /api → RECALL_API_TARGET || localhost:8000
+│       ├── vite.config.ts   # dev 代理 /api → XUNJI_API_TARGET || localhost:8000
 │       ├── tsconfig.json
 │       ├── index.html
 │       ├── Dockerfile       # 构建上下文必须是仓库根目录
@@ -89,15 +89,15 @@ recall/
 │           ├── main.tsx
 │           ├── App.tsx          # 路由 + 侧栏导航
 │           ├── styles.css
-│           ├── api/client.ts    # @recall/api 适配：base URL / localStorage token / 401 跳转
+│           ├── api/client.ts    # @xunji/api 适配：base URL / localStorage token / 401 跳转
 │           ├── components/      # SearchBox, SaveBox, DocumentCard, StatusBadge,
 │           │                    # LiveStatusBadge, Toast, Markdown, AuthForm
 │           └── pages/           # Home, Documents, DocumentDetail, Settings,
 │                                # Login, Register
-│   ├── mobile/              # @recall/mobile：独立 iOS + Android 客户端（Expo / RN）
+│   ├── mobile/              # @xunji/mobile：独立 iOS + Android 客户端（Expo / RN）
 │   │   ├── app/             # Expo Router：index/login/register/documents/[id]/settings/share
 │   │   ├── src/
-│   │   │   ├── api/client.ts    # @recall/api 适配：绝对 base URL / SecureStore token / 401 事件
+│   │   │   ├── api/client.ts    # @xunji/api 适配：绝对 base URL / SecureStore token / 401 事件
 │   │   │   ├── auth/            # AuthProvider、SecureStore token、待处理分享
 │   │   │   ├── storage/         # AsyncStorage 键、缓存用户、离线待保存队列
 │   │   │   ├── outbox/          # 单飞、顺序刷新队列
@@ -109,18 +109,18 @@ recall/
 │   │   ├── app.config.ts    # scheme / bundle id / 分享插件 / 开发期 ATS 与 cleartext
 │   │   ├── metro.config.js  # monorepo watchFolders + nodeModulesPaths
 │   │   └── tsconfig.json
-│   └── landing/              # @recall/landing：纯静态说明页（无框架），
-│                             # dev 5174，构建时注入 RECALL_APP_URL
+│   └── landing/              # @xunji/landing：纯静态说明页（无框架），
+│                             # dev 5174，构建时注入 XUNJI_APP_URL
 │       ├── package.json
 │       ├── vite.config.ts    # transformIndexHtml 替换 __APP_URL__
 │       ├── index.html
 │       ├── styles.css
 │       └── Dockerfile        # 构建上下文必须是仓库根目录
 └── packages/
-    ├── api/                # @recall/api：createApiClient（请求/超时/信封/401 回调/接口定义）
+    ├── api/                # @xunji/api：createApiClient（请求/超时/信封/401 回调/接口定义）
     │   ├── package.json
     │   └── src/index.ts
-    └── shared/              # @recall/shared：第 5 节 API 契约类型 + 平台无关的
+    └── shared/              # @xunji/shared：第 5 节 API 契约类型 + 平台无关的
         ├── package.json     # format.ts / errors.ts（web 与 mobile 共用）
         └── src/index.ts
 ```
@@ -151,10 +151,10 @@ recall/
   React Query、Markdown 组件库、WebView 或字体包。样式使用 RN `StyleSheet`，视觉令牌与 Web 一致，
   仅浅色。`ios/`、`android/` 由 Expo prebuild 生成，不提交。
 - 平台无关的展示/校验逻辑（状态文案与色调、终端状态、域名/日期、URL 提取、错误文案、`ApiError`）
-  必须放在 `packages/shared`，Web 与 mobile 从 `@recall/shared` 导入；shared 不得引用 DOM、
+  必须放在 `packages/shared`，Web 与 mobile 从 `@xunji/shared` 导入；shared 不得引用 DOM、
   `window`、`localStorage` 或 React Native API。
 - 平台无关的 HTTP 传输（路径与 query、15s 超时、`{data}` 解包、错误信封、401 回调、接口定义）
-  放在 `packages/api` 的 `createApiClient`，Web 与 mobile 从 `@recall/api` 导入。两端
+  放在 `packages/api` 的 `createApiClient`，Web 与 mobile 从 `@xunji/api` 导入。两端
   `api/client.ts` 只做适配：base URL、token 读取、401 后的清 token/跳转或事件；不得复制请求逻辑。
   `packages/api` 不引用 `window`、`localStorage` 或 React Native API，token 与 401 副作用由 adapter 注入。
   401 回调会带上本次请求实际使用的 token，适配层据此忽略旧会话的迟到响应。
@@ -165,7 +165,7 @@ recall/
 
 | 变量 | 默认 | 说明 |
 |---|---|---|
-| `DATABASE_URL` | `postgresql+psycopg://recall:recall@localhost:5432/recall` | SQLAlchemy URL |
+| `DATABASE_URL` | `postgresql+psycopg://xunji:xunji@localhost:5432/xunji` | SQLAlchemy URL |
 | `APP_SECRET` | 空（生产必填） | 派生 token 用 |
 | `AI_PROVIDER` | `extractive` | `extractive` \| `openai` \| `openai-compatible`（后两者等价） |
 | `AI_API_KEY` / `AI_BASE_URL` / `AI_MODEL` | 空 / `https://api.openai.com/v1` / `gpt-4o-mini` | 摘要与关键词；API Key 可为空（本地服务） |
@@ -506,9 +506,9 @@ def search(session, user_id: str, query: str, limit: int = 10, settings=None) ->
 ### 7.1 Web
 
 - API base：`/api/v1`（vite dev server proxy → `http://localhost:8000`；nginx 同样代理）。
-- 请求通过 `@recall/api` 的 `createApiClient`；本端 adapter 只提供相对 base URL、`localStorage`
+- 请求通过 `@xunji/api` 的 `createApiClient`；本端 adapter 只提供相对 base URL、`localStorage`
   token 读取和 401 清 token + 跳 `/login`。请求默认 15s 超时。
-- token 存 `localStorage["recall_token"]`；401 → 清 token 并跳 `/login`。
+- token 存 `localStorage["xunji_token"]`；401 → 清 token 并跳 `/login`。
   Web 也会校验本次 401 使用的 token 是否仍是当前 token，避免旧响应误清新会话。
 - 路由：`/login`、`/register`、`/`、`/documents`、`/documents/:id`、`/settings`；未知路径回首页。
 - 顶栏只有品牌、`账户`，不提供侧边栏；`收藏` 列表从首页「查看全部」进入。
@@ -528,12 +528,12 @@ def search(session, user_id: str, query: str, limit: int = 10, settings=None) ->
 - API base 是绝对地址：`EXPO_PUBLIC_API_BASE_URL`，未配置时 iOS 模拟器用
   `http://localhost:8000/api/v1`、Android 模拟器用 `http://10.0.2.2:8000/api/v1`。
   真机通过局域网地址访问，API 必须 `--host 0.0.0.0`。构建时内联，修改后需 `-c` 清缓存。
-- 请求通过 `@recall/api` 的 `createApiClient`；本端 adapter 提供绝对 base URL、SecureStore token
+- 请求通过 `@xunji/api` 的 `createApiClient`；本端 adapter 提供绝对 base URL、SecureStore token
   （`getToken` 内等待启动读取完成）和 401 事件。超时、信封解析与接口定义均在共享包。
 - 请求 15s 超时；401（登录/注册除外）清 SecureStore token 并切回未登录；网络失败保持登录态。
   401 只处理本次请求所用 token 仍是当前 token 的情况，避免账号切换时误清。
-- token 键 `recall.token.v1`（SecureStore）；缓存用户 `recall.user.v1`；待保存队列
-  `recall.outbox.v1`；未登录分享 `recall.pendingShare.v1`（均为 AsyncStorage，后者仅 URL）。
+- token 键 `xunji.token.v1`（SecureStore）；缓存用户 `xunji.user.v1`；待保存队列
+  `xunji.outbox.v1`；未登录分享 `xunji.pendingShare.v1`（均为 AsyncStorage，后者仅 URL）。
 - 路由：`/`（首页）、`/login`、`/register`、`/documents`、`/documents/[id]`、`/settings`、`/share`。
   首页 / 收藏 / 我的三栏底部导航（`components/AppTabBar.tsx`，`router.replace` 切换，不保留历史）；
   详情、分享、登录、注册为无 Tab 的推入页。
@@ -564,9 +564,9 @@ cd backend && uv venv --python 3.12 && uv pip install -e '.[dev]'
 # 迁移
 cd backend && .venv/bin/python -m app.db --migrate
 
-# 测试（独立测试库 recall_test，自动建库与迁移）
+# 测试（独立测试库 xunji_test，自动建库与迁移）
 cd backend && .venv/bin/python -m pytest -q
-# 并行跑不同切片时用不同库：RECALL_TEST_DB=recall_test_search .venv/bin/python -m pytest -q
+# 并行跑不同切片时用不同库：XUNJI_TEST_DB=xunji_test_search .venv/bin/python -m pytest -q
 
 # API 冒烟
 cd backend && .venv/bin/python -m uvicorn app.main:app --port 8000
@@ -577,8 +577,8 @@ cd backend && .venv/bin/python -m app.workers.runner
 
 # 前端（monorepo，仓库根目录执行）
 npm install
-npm run api:typecheck    # @recall/api
-npm run typecheck -w @recall/shared
+npm run api:typecheck    # @xunji/api
+npm run typecheck -w @xunji/shared
 npm run dev            # http://localhost:5173
 npm run build          # 必须零 TS 错误
 

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons'
 import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { formatDate } from '@recall/shared'
+import { formatDate } from '@xunji/shared'
 
 import { AppTabBar } from '../components/AppTabBar'
 import { Button } from '../components/ui/Button'
@@ -12,7 +12,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { useOutbox } from '../providers/OutboxProvider'
 import { colors, fonts, radius, shadow, spacing, type } from '../theme'
 
-const APP_NAME = '拾回'
+const APP_NAME = '寻迹'
 
 export function SettingsScreen() {
   const { user, signOut } = useAuth()
@@ -130,7 +130,7 @@ export function SettingsScreen() {
           <Text style={styles.signOutText}>退出登录</Text>
         </Pressable>
 
-        <Text style={styles.footer}>{APP_NAME} · 你只需要记得，你想找什么。</Text>
+        <Text style={styles.footer}>{APP_NAME} · Xunji · Save anything. Find it by memory.</Text>
       </ScrollView>
       <AppTabBar active="settings" />
       <ConfirmDialog

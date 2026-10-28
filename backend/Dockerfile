@@ -1,4 +1,4 @@
-# Recall 后端镜像
+# Xunji 后端镜像
 FROM python:3.12-slim
 
 # 国内环境可传 --build-arg PIP_INDEX_URL=http://mirrors.aliyun.com/pypi/simple

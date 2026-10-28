@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons'
-import type { RelatedItem } from '@recall/shared'
-import { dedupeRelated, domainOf, RELATION_LABELS } from '@recall/shared'
+import type { RelatedItem } from '@xunji/shared'
+import { dedupeRelated, domainOf, RELATION_LABELS } from '@xunji/shared'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { colors, radius, shadow, spacing, type } from '../theme'

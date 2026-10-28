@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, clearToken } from '../api/client'
-import type { User } from '@recall/shared'
-import { errorMessage, formatDate } from '@recall/shared'
+import type { User } from '@xunji/shared'
+import { errorMessage, formatDate } from '@xunji/shared'
 import { useToast } from '../components/Toast'
 
 export default function Settings() {
@@ -62,7 +62,7 @@ export default function Settings() {
         </dl>
       )}
 
-      <p className="account-note">你的收藏只属于你。拾回只在你自己的收藏中检索，不做公开索引。</p>
+      <p className="account-note">你的收藏只属于你。寻迹只在你自己的收藏中检索，不做公开索引。</p>
 
       <button type="button" className="btn btn-quiet" onClick={handleLogout} disabled={loggingOut}>
         {loggingOut ? '退出中…' : '退出登录'}

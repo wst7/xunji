@@ -14,7 +14,7 @@ from app.db import run_migrations
 from app.errors import error_body, register_exception_handlers
 from app.logging import get_logger, setup_logging
 
-logger = get_logger("recall.api")
+logger = get_logger("xunji.api")
 
 
 @asynccontextmanager
@@ -34,7 +34,7 @@ def create_app():
     from fastapi import FastAPI
 
     app = FastAPI(
-        title="Recall API",
+        title="Xunji API",
         version="0.1.0",
         description="个人链接收藏与智能找回引擎",
         docs_url="/api/docs",

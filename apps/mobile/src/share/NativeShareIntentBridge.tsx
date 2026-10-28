@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'expo-router'
 import { useShareIntent } from 'expo-share-intent'
-import { extractHttpUrl, isValidHttpUrl } from '@recall/shared'
+import { extractHttpUrl, isValidHttpUrl } from '@xunji/shared'
 
 import { useAuth } from '../auth/AuthProvider'
 import { savePendingShare } from '../auth/pendingShare'

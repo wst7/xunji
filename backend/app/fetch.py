@@ -13,11 +13,11 @@ from app.config import get_settings
 from app.errors import ApiError, FetchError
 from app.logging import get_logger
 
-logger = get_logger("recall.fetch")
+logger = get_logger("xunji.fetch")
 
 DEFAULT_UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36 Recall/0.1 (+personal link recall)"
+    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36 Xunji/0.1 (+personal link recall)"
 )
 REDIRECT_STATUSES = {301, 302, 303, 307, 308}
 BLOCKED_HOST_SUFFIXES = (

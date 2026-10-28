@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-import type { User } from '@recall/shared'
+import type { User } from '@xunji/shared'
 import { USER_KEY } from './keys'
 
 /** 只缓存非敏感展示信息，token 永远只放 SecureStore。 */

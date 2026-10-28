@@ -15,7 +15,7 @@ import { Screen } from './ui/Screen'
 import { TextField } from './ui/TextField'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const APP_NAME = '拾回'
+const APP_NAME = '寻迹'
 
 interface AuthFormProps {
   title: string
@@ -89,8 +89,8 @@ export function AuthForm({
             <View style={styles.mark}>
               <Ionicons name="bookmark" size={28} color={colors.surface} />
             </View>
-            <Text style={styles.brandName}>{APP_NAME}</Text>
-            <Text style={styles.tagline}>你只需要记得，你想找什么。</Text>
+            <Text style={styles.brandName}>{APP_NAME} · Xunji</Text>
+            <Text style={styles.tagline}>Save anything. Find it by memory.</Text>
           </View>
 
           <View style={styles.card}>

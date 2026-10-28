@@ -1,8 +1,10 @@
-# 拾回 — 个人链接收藏与智能找回工具
+# 寻迹 · Xunji
 
+> Save anything. Find it by memory.
+>
 > 你不需要记住收藏了什么，只需要记住你想找什么。
 
-把任意链接交给拾回，它在后台完成抓取、正文提取、AI 摘要、关键词、切分与向量索引；
+把任意链接交给寻迹，它在后台完成抓取、正文提取、AI 摘要、关键词、切分与向量索引；
 未来用一句自然语言描述你记得的内容，即可从**你自己的收藏**里把原文找回来，并看到「为什么找到它」。
 
 - 产品定位与边界：[`docs/PRODUCT.md`](docs/PRODUCT.md)
@@ -51,9 +53,9 @@ docker compose up --build
 
 ```bash
 # 1) 数据库
-createuser recall -P            # 密码 recall（或按需修改 DATABASE_URL）
-createdb recall -O recall
-psql -d recall -c 'CREATE EXTENSION vector; CREATE EXTENSION pg_trgm; CREATE EXTENSION pgcrypto;'
+createuser xunji -P            # 密码 xunji（或按需修改 DATABASE_URL）
+createdb xunji -O xunji
+psql -d xunji -c 'CREATE EXTENSION vector; CREATE EXTENSION pg_trgm; CREATE EXTENSION pgcrypto;'
 
 # 2) 后端
 cd backend
@@ -65,13 +67,13 @@ uv pip install -e '.[dev]'
 
 # 3) 前端（monorepo，npm workspaces，仓库根目录执行）
 npm install
-npm run api:typecheck  # @recall/api
+npm run api:typecheck  # @xunji/api
 npm run dev            # 应用   http://localhost:5173
 npm run dev:landing    # 说明页 http://localhost:5174
 ```
 
 > 默认代理到 `http://localhost:8000`；本机 8000 被占用时用
-> `RECALL_API_TARGET=http://127.0.0.1:8010 npm run dev` 指定 API 端口。
+> `XUNJI_API_TARGET=http://127.0.0.1:8010 npm run dev` 指定 API 端口。
 
 ### 手机 App（Expo / React Native，独立客户端）
 
@@ -79,7 +81,7 @@ npm run dev:landing    # 说明页 http://localhost:5174
 自然语言找回、详情与离线待保存队列都直接调用同一个 `/api/v1`，后端不需要改动。
 它使用 Expo SDK 58 + Expo Router，界面为独立的冷中性现代移动端视觉（浅冷灰画布、白色卡片、
 靛蓝强调色、系统无衬线），不沿用 Web 的暖色纸感；平台无关的格式化逻辑在
-`@recall/shared`（npm 作用域名仍为 `@recall`），HTTP 传输（超时、`{data}` 解包、错误信封、接口定义）在 `@recall/api`，
+`@xunji/shared`，HTTP 传输（超时、`{data}` 解包、错误信封、接口定义）在 `@xunji/api`，
 两端只保留各自的 API 地址、token 读取和 401 处理适配。
 
 ```bash
@@ -113,9 +115,9 @@ cd backend
 
 - iOS 使用 Share Extension，Android 注册 `ACTION_SEND` + `text/*`；
 - 首次原生构建后，iOS 需要在 Xcode 中为 App 和 ShareExtension 选择同一个 Development Team
-  （两者共用 App Group `group.com.shihui.app`）；Android 需要可用的 SDK；
-- iOS 分享扩展不能静默后台上传，会打开拾回完成保存；
-- 微信、小红书等若只分享标题/描述或短链而没有 URL，拾回无法保存，会提示没有网页链接。
+  （两者共用 App Group `group.com.xunji.app`）；Android 需要可用的 SDK；
+- iOS 分享扩展不能静默后台上传，会打开寻迹完成保存；
+- 微信、小红书等若只分享标题/描述或短链而没有 URL，寻迹无法保存，会提示没有网页链接。
 
 开发构建允许局域网 HTTP（iOS ATS 例外、Android `usesCleartextTraffic`），
 正式构建必须通过 HTTPS 暴露 API；当前后端没有限流，公网使用前应补 `/auth/*` 限流。
@@ -144,8 +146,8 @@ EXPO_PUBLIC_API_BASE_URL=http://<Mac的局域网IP>:8010/api/v1 \
 
 安装包为 `app/build/outputs/apk/release/app-release.apk`（约 36 MB，仅 `arm64-v8a`）。
 传到手机后需要允许“未知来源”安装；`release` 变体目前用 debug 签名，**不能上架**，
-只用于自己安装体验。已构建好的版本复制到 `~/Downloads/Shihui-0.1.0-arm64.apk`
-（包名 `com.shihui.app`，应用名「拾回」）。
+只用于自己安装体验。已构建好的版本复制到 `~/Downloads/Xunji-0.1.0-arm64.apk`
+（包名 `com.xunji.app`，应用名「寻迹」）。
 
 真机可用的前提是同一 Wi-Fi 下：Mac 上的 API 用 `--host 0.0.0.0` 监听、Worker 在跑、
 APK 里内联的地址就是 Mac 当前的局域网 IP（换网络要重新构建），且 Mac 不睡眠。
@@ -155,12 +157,12 @@ APK 里内联的地址就是 Mac 当前的局域网 IP（换网络要重新构�
 ### 仓库结构
 
 ```text
-recall/
-├── apps/web/            # 应用（React + Vite，@recall/web）：用户实际使用的界面
-├── apps/mobile/         # 独立手机 App（Expo / React Native，@recall/mobile）
-├── apps/landing/        # 说明页（纯静态 HTML/CSS，@recall/landing）：产品介绍与演示
-├── packages/shared/     # 跨端共享：API 契约类型 + 平台无关的格式化/错误逻辑（@recall/shared）
-├── packages/api/        # 跨端 HTTP 传输：createApiClient、超时、信封解析（@recall/api）
+xunji/
+├── apps/web/            # 应用（React + Vite，@xunji/web）：用户实际使用的界面
+├── apps/mobile/         # 独立手机 App（Expo / React Native，@xunji/mobile）
+├── apps/landing/        # 说明页（纯静态 HTML/CSS，@xunji/landing）：产品介绍与演示
+├── packages/shared/     # 跨端共享：API 契约类型 + 平台无关的格式化/错误逻辑（@xunji/shared）
+├── packages/api/        # 跨端 HTTP 传输：createApiClient、超时、信封解析（@xunji/api）
 ├── backend/             # FastAPI + Worker + 迁移 + 测试
 ├── docs/                # PRODUCT.md、ENGINEERING.md
 ├── docker-compose.yml
@@ -173,7 +175,7 @@ recall/
 
 说明页是独立站点，不进入应用：应用内没有产品介绍页面，说明内容只放在 landing。
 应用地址在构建时注入——开发默认 `http://localhost:5173`，Docker 构建通过
-`RECALL_APP_URL` 传入（`docker-compose.yml` 中为 `http://localhost:3000`）。
+`XUNJI_APP_URL` 传入（`docker-compose.yml` 中为 `http://localhost:3000`）。
 
 首次使用：打开前端 → 注册 → 粘贴链接或包含链接的分享文字保存 → 等状态变为「已完成整理」→ 搜索。
 
@@ -215,7 +217,7 @@ AI_MODEL=your-model
 AI_CHAT_PATH=/chat/completions
 AI_AUTH_HEADER=Authorization
 AI_AUTH_PREFIX=Bearer          # 留空则直接发送 key
-AI_EXTRA_HEADERS={"X-Title":"Shihui"}
+AI_EXTRA_HEADERS={"X-Title":"Xunji"}
 AI_JSON_MODE=true              # 服务商不支持 response_format 时设为 false
 AI_TIMEOUT_SECONDS=60
 ```
@@ -260,7 +262,7 @@ API Key 只放 `backend/.env`（或部署平台的密钥配置），不要提交
 
 ```bash
 cd backend
-.venv/bin/python -m pytest -q          # 使用独立测试库 recall_test，自动建库与迁移
+.venv/bin/python -m pytest -q          # 使用独立测试库 xunji_test，自动建库与迁移
 ```
 
 覆盖：URL 规范化与去重、SSRF（内网/元数据/重定向/端口/超限响应）、认证与会话、

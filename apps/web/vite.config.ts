@@ -7,8 +7,8 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        // 本机 8000 被占用时可用 RECALL_API_TARGET=http://127.0.0.1:8010 覆盖
-        target: process.env.RECALL_API_TARGET || 'http://localhost:8000',
+        // 本机 8000 被占用时可用 XUNJI_API_TARGET=http://127.0.0.1:8010 覆盖
+        target: process.env.XUNJI_API_TARGET || 'http://localhost:8000',
         changeOrigin: true,
       },
     },

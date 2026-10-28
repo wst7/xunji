@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { ApiError, errorMessage, isValidHttpUrl } from '@recall/shared'
+import { ApiError, errorMessage, isValidHttpUrl } from '@xunji/shared'
 
 import { api } from '../api/client'
 import { EmptyState } from '../components/ui/EmptyState'

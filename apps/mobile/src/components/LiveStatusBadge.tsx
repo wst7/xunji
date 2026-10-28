@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { ParseStatus } from '@recall/shared'
+import type { ParseStatus } from '@xunji/shared'
 
 import { useLiveStatus } from '../hooks/useLiveStatus'
 import { StatusBadge } from './StatusBadge'

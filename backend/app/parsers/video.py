@@ -18,7 +18,7 @@ from app.parsers.base import (
     parse_datetime,
 )
 
-logger = get_logger("recall.parsers.video")
+logger = get_logger("xunji.parsers.video")
 
 VIDEO_SOURCES = {"youtube", "bilibili", "twitter"}
 

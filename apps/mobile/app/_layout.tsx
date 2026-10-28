@@ -74,8 +74,8 @@ function RootNavigator() {
           <View style={styles.mark}>
             <Ionicons name="bookmark" size={30} color={colors.surface} />
           </View>
-          <Text style={styles.brand}>拾回</Text>
-          <Text style={styles.tagline}>你只需要记得，你想找什么。</Text>
+          <Text style={styles.brand}>寻迹 · Xunji</Text>
+          <Text style={styles.tagline}>Save anything. Find it by memory.</Text>
         </View>
       ) : null}
     </View>

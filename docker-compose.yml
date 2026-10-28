@@ -1,17 +1,17 @@
-# Recall：PostgreSQL(pgvector) + API + Worker + 前端
+# Xunji：PostgreSQL(pgvector) + API + Worker + 前端
 # 启动：docker compose up --build
 # 国内网络可先：docker compose build --build-arg PIP_INDEX_URL=http://mirrors.aliyun.com/pypi/simple
 services:
   db:
     image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_USER: recall
-      POSTGRES_PASSWORD: recall
-      POSTGRES_DB: recall
+      POSTGRES_USER: xunji
+      POSTGRES_PASSWORD: xunji
+      POSTGRES_DB: xunji
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U recall -d recall"]
+      test: ["CMD-SHELL", "pg_isready -U xunji -d xunji"]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -23,7 +23,7 @@ services:
       args:
         PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
     environment:
-      DATABASE_URL: postgresql+psycopg://recall:recall@db:5432/recall
+      DATABASE_URL: postgresql+psycopg://xunji:xunji@db:5432/xunji
       APP_SECRET: ${APP_SECRET:-dev-secret-change-me}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       AI_PROVIDER: ${AI_PROVIDER:-extractive}
@@ -49,7 +49,7 @@ services:
       args:
         PIP_INDEX_URL: ${PIP_INDEX_URL:-https://pypi.org/simple}
     environment:
-      DATABASE_URL: postgresql+psycopg://recall:recall@db:5432/recall
+      DATABASE_URL: postgresql+psycopg://xunji:xunji@db:5432/xunji
       APP_SECRET: ${APP_SECRET:-dev-secret-change-me}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       AI_PROVIDER: ${AI_PROVIDER:-extractive}
@@ -72,7 +72,7 @@ services:
       context: .
       dockerfile: apps/landing/Dockerfile
       args:
-        RECALL_APP_URL: http://localhost:3000
+        XUNJI_APP_URL: http://localhost:3000
     ports:
       - "3001:80"
     restart: unless-stopped

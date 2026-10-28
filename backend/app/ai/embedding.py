@@ -17,7 +17,7 @@ from app.ai.openai_compat import (
 )
 from app.logging import get_logger
 
-logger = get_logger("recall.ai.embedding")
+logger = get_logger("xunji.ai.embedding")
 
 EMBEDDING_BATCH_SIZE = 64
 

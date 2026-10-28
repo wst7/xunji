@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=False)
 
     # 基础
-    database_url: str = "postgresql+psycopg://recall:recall@localhost:5432/recall"
+    database_url: str = "postgresql+psycopg://xunji:xunji@localhost:5432/xunji"
     app_secret: str = ""
     log_level: str = "INFO"
 

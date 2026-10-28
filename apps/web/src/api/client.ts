@@ -1,7 +1,7 @@
-import { createApiClient } from '@recall/api'
+import { createApiClient } from '@xunji/api'
 
 const API_BASE = '/api/v1'
-const TOKEN_KEY = 'recall_token'
+const TOKEN_KEY = 'xunji_token'
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)

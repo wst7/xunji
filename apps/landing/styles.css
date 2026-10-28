@@ -1,5 +1,5 @@
 /*
- * 拾回说明页 —— 与应用同一套「温润纸感」视觉系统
+ * 寻迹说明页 —— 与应用同一套「温润纸感」视觉系统
  * 米白纸面、墨色文字、赭红一点；宋体只用于标题，正文用系统黑体。
  * 纯静态、无框架、无动效。
  */
@@ -164,6 +164,15 @@ h1 {
 h2 {
   font-size: 1.2rem;
   margin: 0 0 14px;
+}
+
+.intro .tagline {
+  margin: 0 0 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
 }
 
 .intro p {

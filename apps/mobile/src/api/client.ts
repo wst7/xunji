@@ -1,4 +1,4 @@
-import { createApiClient } from '@recall/api'
+import { createApiClient } from '@xunji/api'
 
 import { API_BASE } from '../config/env'
 import { emitUnauthorized } from '../auth/sessionEvents'

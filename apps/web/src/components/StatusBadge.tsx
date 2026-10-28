@@ -1,5 +1,5 @@
-import type { ParseStatus } from '@recall/shared'
-import { STATUS_TEXT, statusTone } from '@recall/shared'
+import type { ParseStatus } from '@xunji/shared'
+import { STATUS_TEXT, statusTone } from '@xunji/shared'
 
 /**
  * 状态只在需要用户注意时出现：
