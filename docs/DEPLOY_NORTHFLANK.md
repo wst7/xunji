@@ -1,5 +1,8 @@
 # 部署到 Northflank（从 GitHub 构建）
 
+> **现状：Web 部署已暂停。** 主产品是本地优先的手机 App（`apps/mobile`），它不需要后端。
+> 本文保留为自托管 Web / API 的参考，模板仍可用于自己部署。
+
 仓库根目录的 [`northflank.json`](../northflank.json) 是一份 Northflank 模板（`apiVersion: v1.2`）。跑一次就能建出项目、PostgreSQL、后端镜像构建服务、API、Worker 和 Web 前端，不需要逐项点界面。
 
 模板只声明**结构**；密钥在读入时生成（`${fn.randomSecret(64)}`）或由数据库 addon 注入，不写进仓库。
