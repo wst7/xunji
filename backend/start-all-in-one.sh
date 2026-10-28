@@ -21,6 +21,10 @@ trap 'kill -TERM "$api_pid" "$worker_pid" 2>/dev/null || true' TERM INT
 
 # API 是前台进程：它挂了（或收到信号退出）就收掉 worker 一起退出，
 # 让平台把整个容器重启，而不是留下一个没人管的 worker 继续跑。
-wait "$api_pid" || true
+# 退出码要透传：API 崩溃（如数据库连不上）时以非零退出，平台才会重启；
+# 如果这里固定返回 0，平台会当成「正常结束」，可能不再拉起。
+api_status=0
+wait "$api_pid" || api_status=$?
 kill -TERM "$worker_pid" 2>/dev/null || true
 wait "$worker_pid" || true
+exit "$api_status"
