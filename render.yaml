@@ -1,0 +1,38 @@
+# Render Blueprint：一个免费 Web 服务跑完整应用（API + Worker + 网页）。
+#
+# 用法：Render → New → Blueprint → 选这个仓库。Render 读到本文件后会创建服务；
+# DATABASE_URL 需要你在创建时填写（Supabase 的连接串），其余变量已给好默认值。
+#
+# 免费实例的特点：15 分钟没人访问会休眠，下次访问冷启动约 30–60 秒；
+# 休眠期间 worker 也停着，任务留在库里，醒来后继续处理。
+services:
+  - type: web
+    name: xunji
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./deploy/free/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      # Supabase → Project Settings → Database → Connection string（Session pooler，
+      # 端口 5432）。必须是 postgresql://…；后端会自己补上 psycopg3 驱动。
+      - key: DATABASE_URL
+        sync: false
+      - key: APP_SECRET
+        generateValue: true
+      # 默认离线实现：不需要任何外部密钥，部署完就能用。
+      - key: AI_PROVIDER
+        value: extractive
+      - key: EMBEDDING_PROVIDER
+        value: local
+      - key: EMBEDDING_DIM
+        value: "1536"
+      - key: LOG_LEVEL
+        value: INFO
+      # 免费数据库更在意连接数与查询量，放宽轮询间隔；保存后最多等这么久开始解析。
+      - key: WORKER_POLL_SECONDS
+        value: "15"
+      - key: XUNJI_WEB_DIR
+        value: /app/web

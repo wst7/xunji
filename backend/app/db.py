@@ -30,7 +30,16 @@ _session_factory: sessionmaker | None = None
 def get_engine() -> Engine:
     global _engine
     if _engine is None:
-        _engine = create_engine(get_settings().database_url, pool_pre_ping=True, future=True)
+        url = get_settings().database_url
+        connect_args: dict[str, object] = {}
+        if url.startswith("postgresql+psycopg://"):
+            # 托管平台常给 pgbouncer 事务模式的连接串（Supabase / Neon 的 pooler）。
+            # 事务池不保留会话状态，服务端预处理语句会互相冲突；关掉自动 prepare
+            # 后直连、会话池、事务池三种串都能用，代价只是每次重新解析 SQL。
+            connect_args["prepare_threshold"] = None
+        _engine = create_engine(
+            url, pool_pre_ping=True, future=True, connect_args=connect_args
+        )
     return _engine
 
 

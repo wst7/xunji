@@ -173,9 +173,11 @@ xunji/
 ├── packages/shared/     # 跨端共享：API 契约类型 + 平台无关的格式化/错误逻辑（@xunji/shared）
 ├── packages/api/        # 跨端 HTTP 传输：createApiClient、超时、信封解析（@xunji/api）
 ├── backend/             # FastAPI + Worker + 迁移 + 测试
-├── docs/                # PRODUCT.md、ENGINEERING.md、DEPLOY_NORTHFLANK.md
+├── docs/                # PRODUCT.md、ENGINEERING.md、DEPLOY_FREE.md、DEPLOY_NORTHFLANK.md
+├── deploy/free/         # 单容器镜像（API + Worker + 网页），面向免费 PaaS
 ├── docker-compose.yml
 ├── northflank.json      # Northflank 模板：GitHub 构建 + 部署 API / Worker / Web
+├── render.yaml          # Render Blueprint：一个免费 Web 服务跑完整应用
 └── package.json         # npm workspaces 根
 ```
 
@@ -192,7 +194,23 @@ xunji/
 
 首次使用：打开前端 → 注册 → 粘贴链接或包含链接的分享文字保存 → 等状态变为「已完成整理」→ 搜索。
 
-## 部署到 Northflank
+## 部署
+
+两种形态共用同一份代码，按预算选一种，**不要同时部署**。
+
+### 免费（$0）：一个容器 + 外部数据库
+
+`deploy/free/Dockerfile` 把 API、Worker 和网页构建产物打进同一个镜像：
+`uvicorn` 提供 `/api/v1`，worker 作为子进程领任务，FastAPI 顺带托管前端（`XUNJI_WEB_DIR`），
+因此不需要 Nginx 和跨域。数据库用 Supabase 免费 PostgreSQL（需要 `vector`、`pg_trgm`、`pgcrypto`）。
+
+Render 直接读仓库根目录的 `render.yaml`。完整步骤、环境变量和排错见
+[`docs/DEPLOY_FREE.md`](docs/DEPLOY_FREE.md)。镜像本身是通用的，Koyeb 或自己的机器上
+用 `docker build -f deploy/free/Dockerfile -t xunji .` 也能跑。
+
+代价：免费实例 15 分钟无访问会休眠，冷启动约 30–60 秒；数据库容量与连接数都有上限。
+
+### Northflank（付费，常在线）
 
 `northflank.json` 是一份 Northflank 模板：从 GitHub 构建后端镜像，创建 PostgreSQL 16、
 API、Worker 与 Web 前端（Nginx 托管前端并反代 `/api/`）。导入与后续校验步骤见

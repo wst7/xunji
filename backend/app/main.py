@@ -1,12 +1,15 @@
 """FastAPI 应用入口：python -m uvicorn app.main:app --port 8000"""
 from __future__ import annotations
 
+import os
 import time
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api import auth_api, documents_api, health, search_api
 from app.config import get_settings, validate_settings
@@ -87,7 +90,46 @@ def create_app():
     api.include_router(documents_api.router)
     api.include_router(search_api.router)
     app.include_router(api)
+    _mount_spa(app)
     return app
+
+
+def _mount_spa(app) -> None:
+    """让 API 进程顺带托管前端构建产物（单容器部署用）。
+
+    免费 PaaS 通常只给一个 Web 服务，没有单独放 Nginx 的位置。把 `XUNJI_WEB_DIR`
+    指向 `apps/web` 的构建目录，页面和接口就是同一个源：不需要 CORS，也不需要
+    再维护一份反向代理配置。未设置该变量、或目录里没有 index.html 时完全跳过，
+    行为与只跑 API 时一致。
+    """
+    raw = os.environ.get("XUNJI_WEB_DIR", "").strip()
+    if not raw:
+        return
+    web_dir = Path(raw).resolve()
+    index = web_dir / "index.html"
+    if not index.is_file():
+        logger.warning("web_dir_missing", extra={"web_dir": str(web_dir)})
+        return
+
+    # 带 hash 的构建产物单独挂载，交给 StaticFiles 处理缓存头与 304。
+    assets = web_dir / "assets"
+    if assets.is_dir():
+        app.mount("/assets", StaticFiles(directory=assets), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def spa_fallback(full_path: str):
+        # API 前缀下的未知路径必须返回 JSON 404，不能回落到 index.html。
+        if full_path == "api" or full_path.startswith("api/"):
+            return JSONResponse(
+                status_code=404, content=error_body("NOT_FOUND", "接口不存在。")
+            )
+        candidate = (web_dir / full_path).resolve()
+        # 只发构建目录内的真实文件；其余（含 ../ 穿越）一律回 index.html 交给前端路由。
+        if candidate.is_file() and web_dir in candidate.parents:
+            return FileResponse(candidate)
+        return FileResponse(index)
+
+    logger.info("web_static_mounted", extra={"web_dir": str(web_dir)})
 
 
 app = create_app()
