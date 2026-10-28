@@ -10,13 +10,21 @@ interface SaveFieldProps {
   disabled?: boolean
 }
 
+/** 只输入了域名（没有协议）时补上 https://，避免用户被“没有链接”挡住。 */
+function withScheme(text: string): string | null {
+  const trimmed = text.trim()
+  if (!trimmed || trimmed.length > 500 || /\s/.test(trimmed)) return null
+  if (!/^[\w-]+(\.[\w-]+)+(:\d+)?(\/\S*)?$/i.test(trimmed)) return null
+  return `https://${trimmed}`
+}
+
 /** 接受纯链接或分享文字，实时提取第一段 http(s) URL。 */
 export function SaveField({ onSave, disabled = false }: SaveFieldProps) {
   const [value, setValue] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const detectedUrl = extractHttpUrl(value)
+  const detectedUrl = extractHttpUrl(value) ?? withScheme(value)
   const extraText = detectedUrl !== null && value.trim() !== detectedUrl
   const inactive = disabled || busy || !detectedUrl
 
@@ -174,7 +182,8 @@ const styles = StyleSheet.create({
   },
   saveButtonInactive: {
     backgroundColor: colors.lineStrong,
-  },  pressed: {
+  },
+  pressed: {
     opacity: 0.75,
   },
   hintRow: {
