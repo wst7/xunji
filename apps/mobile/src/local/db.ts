@@ -60,6 +60,14 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT NOT NULL
 );
 `)
+
+  // 上次进程在抓取/解析中途被杀掉时，这些行会一直停在非终态。
+  // 本进程还没有开始处理任何条目，启动时把它们放回队列最安全。
+  await db.runAsync(
+    `UPDATE documents SET parse_status = 'pending', parse_stage = 'fetch', updated_at = ?
+     WHERE deleted_at IS NULL AND parse_status IN ('fetching', 'parsing', 'analyzing')`,
+    new Date().toISOString(),
+  )
   return db
 }
 

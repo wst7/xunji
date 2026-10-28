@@ -147,12 +147,12 @@ export async function summarizeWithLlm(input: {
   url: string
   text: string
 }): Promise<SummaryResult | null> {
-  const state = await loadLlmState()
-  if (!state.enabled) return null
-  const key = await loadLlmKey()
-  if (!key) return null
-
   try {
+    const state = await loadLlmState()
+    if (!state.enabled) return null
+    const key = await loadLlmKey()
+    if (!key) return null
+
     const raw = await chat(
       state,
       key,

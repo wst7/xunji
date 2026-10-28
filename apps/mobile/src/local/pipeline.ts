@@ -23,7 +23,13 @@ export async function processPendingQueue(): Promise<void> {
     for (let i = 0; i < 20; i += 1) {
       const next = await repo.nextPending()
       if (!next) break
-      await processOne(next.id, next.url)
+      try {
+        await processOne(next.id, next.url)
+      } catch {
+        // 单条出错不能卡住整个队列；状态留在非终态会在下次启动时被重置。
+        await repo.markFailed(next.id, 'INTERNAL_ERROR').catch(() => undefined)
+        emitChange()
+      }
     }
   } finally {
     running = false
