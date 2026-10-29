@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentDetail, ParseStatus, RelatedItem } from '@xunji/shared'
 import {
   domainOf,
@@ -47,7 +48,7 @@ function DetailTopBar({
         hitSlop={8}
         style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
       >
-        <Ionicons name="chevron-back" size={22} color={colors.ink} />
+        <Ionicons name="chevron-back" size={21} color={colors.ink} />
       </Pressable>
       <Text style={styles.topbarTitle}>收藏详情</Text>
       {onOpen ? (
@@ -72,6 +73,7 @@ export function DocumentDetailScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>()
   const id = Array.isArray(params.id) ? params.id[0] : params.id
   const { toast } = useToast()
+  const insets = useSafeAreaInsets()
 
   const [doc, setDoc] = useState<DocumentDetail | null>(null)
   const [related, setRelated] = useState<RelatedItem[]>([])
@@ -179,11 +181,19 @@ export function DocumentDetailScreen() {
 
   const bodySource = doc.content_markdown ?? doc.plain_text ?? ''
   const canReprocess = status === 'partial' || status === 'failed'
+  const actionBarPad = Math.max(insets.bottom, spacing.md)
 
   return (
     <Screen>
       <DetailTopBar onBack={goBack} onOpen={() => void openOriginal()} />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: 84 + actionBarPad + spacing.xl },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.domainChip}>
           <Ionicons name="globe-outline" size={12} color={colors.accent} />
           <Text style={styles.domainText}>{domainOf(doc.url)}</Text>
@@ -223,7 +233,7 @@ export function DocumentDetailScreen() {
         {(doc.summary_short || doc.summary_long) && (
           <View style={styles.summaryBlock}>
             <View style={styles.blockLabelRow}>
-              <Ionicons name="sparkles" size={15} color={colors.accent} />
+              <Ionicons name="sparkles" size={14} color={colors.accent} />
               <Text style={styles.label}>摘要</Text>
             </View>
             {doc.summary_short && <Text style={styles.summaryLead}>{doc.summary_short}</Text>}
@@ -233,7 +243,7 @@ export function DocumentDetailScreen() {
 
         {doc.keywords.length > 0 && (
           <View style={styles.keywordBlock}>
-            <Text style={styles.label}>关键词</Text>
+            <Text style={styles.keywordLabel}>关键词</Text>
             <View style={styles.chips}>
               {doc.keywords.map((keyword) => (
                 <View key={keyword} style={styles.chip}>
@@ -264,23 +274,26 @@ export function DocumentDetailScreen() {
           <RelatedList items={related} onPress={(nextId) => router.push(`/documents/${nextId}`)} />
         )}
 
-        <View style={styles.footer}>
-          <Button
-            label="打开原文"
-            onPress={() => void openOriginal()}
-            icon="open-outline"
-          />
-          <Pressable
-            onPress={confirmDelete}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: deleting, busy: deleting }}
-            style={({ pressed }) => [styles.delete, pressed && styles.pressed]}
-          >
-            <Ionicons name="trash-outline" size={16} color={colors.error} />
-            <Text style={styles.deleteText}>{deleting ? '删除中…' : '删除这篇收藏'}</Text>
-          </Pressable>
-        </View>
+        <Pressable
+          onPress={confirmDelete}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: deleting, busy: deleting }}
+          style={({ pressed }) => [styles.delete, pressed && styles.pressed]}
+        >
+          <Ionicons name="trash-outline" size={16} color={colors.error} />
+          <Text style={styles.deleteText}>{deleting ? '删除中…' : '删除这篇收藏'}</Text>
+        </Pressable>
       </ScrollView>
+
+      <View style={[styles.actionBar, { paddingBottom: actionBarPad }]}>
+        <Button
+          label="打开原文"
+          onPress={() => void openOriginal()}
+          icon="open-outline"
+          style={styles.openButton}
+        />
+      </View>
+
       <ConfirmDialog
         visible={confirmingDelete}
         title="删除这篇收藏？"
@@ -299,16 +312,17 @@ export function DocumentDetailScreen() {
 
 const styles = StyleSheet.create({
   topbar: {
+    minHeight: 52,
+    paddingTop: spacing.xs,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    minHeight: 56,
   },
   iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: radius.control,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
@@ -316,18 +330,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconPlaceholder: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
   },
   topbarTitle: {
-    ...type.body,
+    fontSize: 14,
+    lineHeight: 20,
     fontWeight: '600',
+    letterSpacing: -0.2,
     color: colors.ink,
   },
   content: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: 20,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.xxl,
   },
   stateWrap: {
     padding: spacing.lg,
@@ -343,26 +358,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: 4,
+    height: 24,
+    paddingHorizontal: 10,
     backgroundColor: colors.accentSoft,
     borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
     marginBottom: spacing.md,
   },
   domainText: {
-    ...type.caption,
+    fontSize: 11.5,
+    lineHeight: 16,
     color: colors.accent,
     fontWeight: '600',
   },
   title: {
-    ...type.display,
-    fontSize: 26,
-    lineHeight: 34,
-    letterSpacing: -0.5,
+    fontSize: 24,
+    lineHeight: 32,
+    fontWeight: '700',
+    letterSpacing: -0.7,
     color: colors.ink,
   },
   meta: {
-    ...type.caption,
+    fontSize: 12,
+    lineHeight: 18,
     color: colors.faint,
     marginTop: spacing.sm,
   },
@@ -385,35 +402,46 @@ const styles = StyleSheet.create({
     color: colors.faint,
   },
   summaryBlock: {
-    marginTop: spacing.xl,
+    marginTop: 18,
     backgroundColor: colors.accentSoft,
+    borderWidth: 1,
+    borderColor: colors.accentLine,
     borderRadius: radius.card,
     padding: spacing.lg,
-    gap: spacing.sm,
+    gap: 7,
   },
   blockLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: 5,
   },
   label: {
-    ...type.caption,
-    color: colors.muted,
+    fontSize: 12,
+    lineHeight: 17,
     fontWeight: '600',
+    color: colors.muted,
   },
   summaryLead: {
-    ...type.title,
-    fontSize: 16,
-    lineHeight: 25,
+    fontSize: 15.5,
+    lineHeight: 24,
+    fontWeight: '600',
+    letterSpacing: -0.2,
     color: colors.ink,
   },
   summaryLong: {
-    ...type.body,
+    fontSize: 13.5,
+    lineHeight: 22,
     color: colors.inkSoft,
   },
   keywordBlock: {
-    marginTop: spacing.xl,
-    gap: spacing.sm,
+    marginTop: 18,
+  },
+  keywordLabel: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '600',
+    color: colors.muted,
+    marginBottom: spacing.sm,
   },
   chips: {
     flexDirection: 'row',
@@ -421,20 +449,25 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   chip: {
+    height: 26,
+    paddingHorizontal: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
     borderRadius: radius.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 5,
   },
   chipText: {
-    ...type.caption,
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.muted,
   },
   body: {
-    marginTop: spacing.xl,
+    marginTop: 18,
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.lineSoft,
     borderRadius: radius.card,
     padding: spacing.lg,
     ...shadow.card,
@@ -443,22 +476,36 @@ const styles = StyleSheet.create({
     ...type.body,
     color: colors.muted,
   },
-  footer: {
-    marginTop: spacing.xl,
-    gap: spacing.md,
-  },
   delete: {
+    marginTop: spacing.xl,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
     minHeight: 44,
   },
-  pressed: {
-    opacity: 0.6,
-  },
   deleteText: {
     ...type.caption,
     color: colors.error,
+  },
+  actionBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 20,
+    paddingTop: spacing.md,
+    backgroundColor: colors.surface,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
+    ...shadow.action,
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.08,
+  },
+  openButton: {
+    minHeight: 48,
+  },
+  pressed: {
+    opacity: 0.6,
   },
 })

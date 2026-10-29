@@ -3,20 +3,21 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Platform,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
-import type { DocumentSummary, ParseStatus, SearchResult } from '@xunji/shared'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import type { ParseStatus, SearchResult } from '@xunji/shared'
 import { errorMessage, STATUS_TEXT } from '@xunji/shared'
 
 import { AppTabBar } from '../components/AppTabBar'
-import { DocumentCard, SearchResultCard } from '../components/DocumentCard'
-import { HomeOnboarding } from '../components/HomeOnboarding'
+import { AskCard } from '../components/AskCard'
+import { SearchResultCard } from '../components/DocumentCard'
 import { SaveField } from '../components/SaveField'
 import { SearchField } from '../components/SearchField'
 import { EmptyState } from '../components/ui/EmptyState'
@@ -26,9 +27,8 @@ import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
 import { useLocalRevision } from '../local/useLocalRevision'
 import { useToast } from '../providers/ToastProvider'
-import { colors, spacing, type } from '../theme'
+import { colors, layout, radius, spacing, type } from '../theme'
 
-const RECENT_COUNT = 6
 const APP_NAME = '寻迹'
 
 function terminalToastContent(status: ParseStatus): {
@@ -45,47 +45,48 @@ function terminalToastContent(status: ParseStatus): {
   }
 }
 
+function BrandBar() {
+  return (
+    <View style={styles.brandbar}>
+      <View style={styles.brand}>
+        <View style={styles.mark}>
+          <Ionicons name="bookmark" size={15} color={colors.surface} />
+        </View>
+        <Text style={styles.brandname}>{APP_NAME}</Text>
+      </View>
+      <View style={styles.localchip}>
+        <Ionicons name="shield-checkmark-outline" size={12} color={colors.accent} />
+        <Text style={styles.localchipText}>仅本机</Text>
+      </View>
+    </View>
+  )
+}
+
 export function HomeScreen() {
   const router = useRouter()
   const { toast } = useToast()
   const revision = useLocalRevision()
+  const insets = useSafeAreaInsets()
 
+  const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[] | null>(null)
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
-  const [recent, setRecent] = useState<DocumentSummary[] | null>(null)
-  const [recentError, setRecentError] = useState<string | null>(null)
-  const [refreshing, setRefreshing] = useState(false)
   const [lastQuery, setLastQuery] = useState('')
 
-  const loadRecent = useCallback(async () => {
-    try {
-      const res = await repo.listDocuments({ page: 1, pageSize: RECENT_COUNT })
-      setRecent(res.items)
-      setRecentError(null)
-    } catch (e) {
-      setRecentError(errorMessage(e, '加载最近收藏失败，请稍后重试。'))
-      setRecent((current) => current ?? [])
-    }
-  }, [])
+  const inResults = lastQuery.length > 0
+  const bottomPad = Math.max(insets.bottom, spacing.sm) + layout.tabBarSpace
 
-  // 本地写入（保存、解析完成、删除）都会推进 revision，列表随之重读。
+  // 首页聚焦时把积压的本机任务推进一轮（保存、分享、重试都走这里）。
   useFocusEffect(
     useCallback(() => {
-      void loadRecent()
       void processPendingQueue()
-    }, [loadRecent]),
+    }, []),
   )
 
-  useFocusEffect(
-    useCallback(() => {
-      void loadRecent()
-    }, [loadRecent, revision]),
-  )
-
-  // 搜索结果也跟随本地数据变化（例如刚保存的那篇解析完成）。
+  // 本地数据变化（例如刚保存的那篇解析完成）时，刷新当前搜索结果。
   useEffect(() => {
-    if (results === null || !lastQuery) return
+    if (!lastQuery) return
     let cancelled = false
     void repo
       .searchDocuments(lastQuery)
@@ -96,28 +97,29 @@ export function HomeScreen() {
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [revision, lastQuery])
 
-  async function handleRefresh() {
-    setRefreshing(true)
-    await processPendingQueue()
-    await loadRecent()
-    setRefreshing(false)
-  }
-
-  async function handleSearch(query: string) {
+  async function runSearch(raw: string) {
+    const q = raw.trim()
+    if (!q || searching) return
     setSearching(true)
     setSearchError(null)
-    setLastQuery(query)
+    setLastQuery(q)
+    setResults(null)
     try {
-      setResults(await repo.searchDocuments(query))
+      setResults(await repo.searchDocuments(q))
     } catch (e) {
-      setResults(null)
       setSearchError(errorMessage(e, '搜索暂时不可用，请稍后重试。'))
     } finally {
       setSearching(false)
     }
+  }
+
+  function clearSearch() {
+    setResults(null)
+    setSearchError(null)
+    setLastQuery('')
+    setQuery('')
   }
 
   async function handleSave(url: string, titleHint: string | null): Promise<boolean> {
@@ -134,7 +136,6 @@ export function HomeScreen() {
         toast('已保存，正在本机整理内容……', { type: 'success' })
         void processPendingQueue()
       }
-      await loadRecent()
       return true
     } catch (e) {
       if (e instanceof Error && e.message === 'INVALID_URL') {
@@ -149,129 +150,113 @@ export function HomeScreen() {
   function handleTerminal(status: ParseStatus) {
     const content = terminalToastContent(status)
     toast(content.message, { type: content.type })
-    void loadRecent()
   }
 
   return (
     <Screen>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior="padding"
-        keyboardVerticalOffset={0}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => void handleRefresh()}
-              tintColor={colors.accent}
-              colors={[colors.accent]}
-            />
-          }
-        >
-          <View style={styles.topbar}>
-            <View style={styles.brandRow}>
-              <View style={styles.mark}>
-                <Ionicons name="bookmark" size={15} color={colors.surface} />
-              </View>
-              <Text style={styles.brand}>{APP_NAME}</Text>
+        {inResults ? (
+          <ScrollView
+            style={styles.flex}
+            contentContainerStyle={[styles.resultsContent, { paddingBottom: bottomPad }]}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
+          >
+            <BrandBar />
+
+            <View style={styles.searchhead}>
+              <SearchField
+                value={query}
+                onChangeText={setQuery}
+                onSubmit={() => void runSearch(query)}
+                loading={searching}
+              />
             </View>
-          </View>
 
-          <View style={styles.hero}>
-            <Text style={styles.heroEyebrow}>Save anything. Find it by memory.</Text>
-            <Text style={styles.heroTitle}>
-              今天想<Text style={styles.heroEm}>找</Text>点什么？
-            </Text>
-            <Text style={styles.heroLede}>用一句话，找回你收藏过的内容。</Text>
-          </View>
+            <View style={styles.resulthead}>
+              <Text style={styles.resultcount}>
+                找到{' '}
+                <Text style={styles.resultcountStrong}>
+                  {searching ? '…' : results === null ? '—' : results.length}
+                </Text>{' '}
+                条相关
+              </Text>
+              <Pressable
+                onPress={clearSearch}
+                accessibilityRole="button"
+                accessibilityLabel="清除搜索，回到首页"
+                hitSlop={8}
+                style={({ pressed }) => pressed && styles.pressed}
+              >
+                <Text style={styles.viewall}>清除</Text>
+              </Pressable>
+            </View>
 
-          <View style={styles.fields}>
-            <SearchField onSubmit={(query) => void handleSearch(query)} loading={searching} />
-            <SaveField onSave={handleSave} />
-          </View>
-
-          {searchError && <Notice text={searchError} tone="error" />}
-
-          {results !== null ? (
-            <View style={styles.section}>
-              <View style={styles.sectionHead}>
-                <Text style={styles.sectionTitle}>
-                  搜索结果 <Text style={styles.count}>{results.length} 条</Text>
-                </Text>
-                <Pressable
-                  onPress={() => setResults(null)}
-                  accessibilityRole="button"
-                  accessibilityLabel="清除搜索结果"
-                  style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
-                >
-                  <Text style={styles.sectionLink}>清除</Text>
-                  <Ionicons name="close" size={14} color={colors.accent} />
-                </Pressable>
+            {searchError && (
+              <View style={styles.notice}>
+                <Notice text={searchError} tone="error" />
               </View>
+            )}
 
-              {results.length === 0 ? (
+            {searching && results === null ? (
+              <View style={styles.loadingRow}>
+                <ActivityIndicator size="small" color={colors.accent} />
+                <Text style={styles.loadingText}>正在找回……</Text>
+              </View>
+            ) : results === null ? null : results.length === 0 ? (
+              searchError ? null : (
                 <EmptyState
                   icon="search-outline"
                   title="没有足够相关的内容。"
                   body="换一种描述，或者先保存那篇内容。"
                 />
-              ) : (
-                <View style={styles.cardList}>
-                  {results.map((item) => (
-                    <SearchResultCard
-                      key={item.document_id}
-                      item={item}
-                      onPress={() => router.push(`/documents/${item.document_id}`)}
-                      onTerminal={handleTerminal}
-                    />
-                  ))}
-                </View>
-              )}
-            </View>
-          ) : (
-            <View style={styles.section}>
-              <View style={styles.sectionHead}>
-                <Text style={styles.sectionTitle}>最近收藏</Text>
-                <Pressable
-                  onPress={() => router.push('/documents')}
-                  accessibilityRole="button"
-                  accessibilityLabel="查看全部收藏"
-                  style={({ pressed }) => [styles.linkRow, pressed && styles.pressed]}
-                >
-                  <Text style={styles.sectionLink}>查看全部</Text>
-                  <Ionicons name="chevron-forward" size={14} color={colors.accent} />
-                </Pressable>
+              )
+            ) : (
+              <View style={styles.cards}>
+                {results.map((item) => (
+                  <SearchResultCard
+                    key={item.document_id}
+                    item={item}
+                    onPress={() => router.push(`/documents/${item.document_id}`)}
+                    onTerminal={handleTerminal}
+                  />
+                ))}
               </View>
+            )}
+          </ScrollView>
+        ) : (
+          <ScrollView
+            style={styles.flex}
+            contentContainerStyle={[styles.homeContent, { paddingBottom: bottomPad }]}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            showsVerticalScrollIndicator={false}
+          >
+            <BrandBar />
 
-              {recentError && <Notice text={recentError} tone="error" />}
-
-              {recent === null ? (
-                <View style={styles.loadingRow}>
-                  <ActivityIndicator size="small" color={colors.faint} />
-                  <Text style={styles.loadingText}>正在加载……</Text>
-                </View>
-              ) : recent.length === 0 ? (
-                <HomeOnboarding />
-              ) : (
-                <View style={styles.cardList}>
-                  {recent.map((doc) => (
-                    <DocumentCard
-                      key={doc.id}
-                      doc={doc}
-                      onPress={() => router.push(`/documents/${doc.id}`)}
-                      onTerminal={handleTerminal}
-                    />
-                  ))}
-                </View>
-              )}
+            <View style={styles.hero}>
+              <Text style={styles.heroTitle}>
+                今天想<Text style={styles.heroEm}>找</Text>点什么？
+              </Text>
+              <Text style={styles.heroLede}>用你记得的那句话，找回存过的内容。</Text>
             </View>
-          )}
-        </ScrollView>
+
+            <View style={styles.actions}>
+              <AskCard
+                style={styles.askCard}
+                value={query}
+                onChangeText={setQuery}
+                onSubmit={() => void runSearch(query)}
+                loading={searching}
+              />
+              <SaveField style={styles.saveCard} onSave={handleSave} />
+            </View>
+          </ScrollView>
+        )}
       </KeyboardAvoidingView>
       <AppTabBar active="home" />
     </Screen>
@@ -282,18 +267,24 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxl,
+  homeContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingTop: spacing.xs,
   },
-  topbar: {
+  resultsContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingTop: spacing.xs,
+  },
+  brandbar: {
+    minHeight: 44,
+    paddingTop: 6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 56,
-    paddingTop: spacing.xs,
   },
-  brandRow: {
+  brand: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -306,24 +297,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  brand: {
-    ...type.title,
+  brandname: {
     fontSize: 20,
-    letterSpacing: -0.3,
+    lineHeight: 26,
+    fontWeight: '700',
+    letterSpacing: -0.4,
     color: colors.ink,
   },
-  hero: {
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xl,
-    gap: spacing.sm,
+  localchip: {
+    height: 26,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
   },
-  heroEyebrow: {
-    ...type.caption,
+  localchipText: {
     fontSize: 11,
-    letterSpacing: 0.9,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    color: colors.accent,
+    lineHeight: 15,
+    color: colors.muted,
+  },
+  hero: {
+    marginTop: 30,
+    gap: spacing.sm,
   },
   heroTitle: {
     ...type.display,
@@ -336,52 +335,62 @@ const styles = StyleSheet.create({
     ...type.body,
     color: colors.muted,
   },
-  fields: {
-    gap: spacing.md,
+  actions: {
+    flex: 1,
+    minHeight: 0,
+    marginTop: 26,
+    gap: 14,
   },
-  section: {
-    marginTop: spacing.xxl,
+  askCard: {
+    flex: 1.12,
+    minHeight: 170,
   },
-  sectionHead: {
+  saveCard: {
+    flex: 0.88,
+    minHeight: 170,
+  },
+  searchhead: {
+    marginTop: 14,
+  },
+  resulthead: {
+    marginTop: 20,
+    marginBottom: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  resultcount: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.muted,
+  },
+  resultcountStrong: {
+    color: colors.ink,
+    fontWeight: '700',
+  },
+  viewall: {
+    fontSize: 12.5,
+    lineHeight: 18,
+    fontWeight: '600',
+    color: colors.accent,
+  },
+  notice: {
     marginBottom: spacing.md,
   },
-  sectionTitle: {
-    ...type.title,
-    color: colors.ink,
-  },
-  count: {
-    ...type.caption,
-    color: colors.faint,
-  },
-  linkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    minHeight: 32,
-    paddingLeft: spacing.sm,
-  },
-  sectionLink: {
-    ...type.caption,
-    color: colors.accent,
-    fontWeight: '600',
-  },
-  pressed: {
-    opacity: 0.55,
-  },
-  cardList: {
+  cards: {
     gap: spacing.md,
   },
   loadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.xl,
+    paddingVertical: spacing.xxl,
   },
   loadingText: {
     ...type.caption,
     color: colors.faint,
+  },
+  pressed: {
+    opacity: 0.55,
   },
 })

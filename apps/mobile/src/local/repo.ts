@@ -366,6 +366,37 @@ export async function countDocuments(): Promise<number> {
   return row?.total ?? 0
 }
 
+export interface DocumentStats {
+  total: number
+  /** completed 与 partial 都写入了 search_text，可以被检索到。 */
+  searchable: number
+  processing: number
+  failed: number
+}
+
+/** 设置页的深色统计面板只需要这四个数。 */
+export async function documentStats(): Promise<DocumentStats> {
+  const db = await getDb()
+  const row = await db.getFirstAsync<{
+    total: number
+    searchable: number
+    processing: number
+    failed: number
+  }>(
+    `SELECT COUNT(*) AS total,
+       SUM(CASE WHEN parse_status IN ('completed', 'partial') THEN 1 ELSE 0 END) AS searchable,
+       SUM(CASE WHEN parse_status IN ('pending', 'fetching', 'parsing', 'analyzing') THEN 1 ELSE 0 END) AS processing,
+       SUM(CASE WHEN parse_status = 'failed' THEN 1 ELSE 0 END) AS failed
+     FROM documents WHERE deleted_at IS NULL`,
+  )
+  return {
+    total: row?.total ?? 0,
+    searchable: row?.searchable ?? 0,
+    processing: row?.processing ?? 0,
+    failed: row?.failed ?? 0,
+  }
+}
+
 // ---------------------------------------------------------------------------
 // 本地检索
 // ---------------------------------------------------------------------------

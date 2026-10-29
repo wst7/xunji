@@ -1,0 +1,891 @@
+<title>寻迹 · 界面视觉稿</title>
+<style>
+/* Layout: a light review board; five 360dp phone frames wrap across the page, each captioned, with a token band below. */
+:root{
+  color-scheme: light;
+  --bg:#E9ECF2;
+  --bg-glow:#F4F6FA;
+  --fg:#0E1116;
+  --muted:#5A6472;
+  --faint:#7C8695;
+  --line:#D7DCE5;
+  --chip:#FFFFFF;
+  --accent:#4F46E5;
+  --accent-soft:#EEF0FF;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --frame-shadow:0 30px 70px -34px rgba(15,23,42,.45);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#0B0E14;
+    --bg-glow:#151B26;
+    --fg:#EDEFF4;
+    --muted:#A6AFBE;
+    --faint:#7E8898;
+    --line:#252B36;
+    --chip:#151A22;
+    --accent:#9B96FF;
+    --accent-soft:#1C1B33;
+    --frame-shadow:0 34px 80px -30px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0B0E14;
+  --bg-glow:#151B26;
+  --fg:#EDEFF4;
+  --muted:#A6AFBE;
+  --faint:#7E8898;
+  --line:#252B36;
+  --chip:#151A22;
+  --accent:#9B96FF;
+  --accent-soft:#1C1B33;
+  --frame-shadow:0 34px 80px -30px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:radial-gradient(1100px 620px at 50% -160px,var(--bg-glow),transparent 72%),var(--bg);
+  color:var(--fg);
+  font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+.page{max-width:1240px;margin:0 auto;padding-block:56px;padding-inline:24px}
+@media (max-width:600px){
+  .page{padding-block:32px;padding-inline:16px}
+}
+
+.board-head{max-width:760px;display:flex;flex-direction:column;gap:12px;margin-bottom:46px}
+.eyebrow{font-family:var(--mono);font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:clamp(28px,4.2vw,42px);line-height:1.12;letter-spacing:-.025em;font-weight:700;margin:0;text-wrap:balance}
+.lede{font-size:15px;line-height:1.75;color:var(--muted);margin:0;max-width:60ch}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.legend span{display:inline-flex;align-items:center;gap:7px;height:30px;padding-inline:12px;border:1px solid var(--line);border-radius:999px;background:var(--chip);font-size:12px;color:var(--muted)}
+.legend i{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.legend i.t2{background:#0F766E}
+.legend i.t3{background:#BE185D}
+
+.frames{display:flex;flex-wrap:wrap;gap:44px 28px;justify-content:center;align-items:flex-start}
+figure{margin:0;width:360px;max-width:100%;display:flex;flex-direction:column;gap:16px}
+figcaption{display:flex;gap:12px;padding-inline:6px}
+.cap-num{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--accent);padding-top:3px}
+.cap-title{font-size:14px;font-weight:600;margin:0 0 3px;letter-spacing:-.01em}
+.cap-note{font-size:12.5px;line-height:1.65;color:var(--muted);margin:0}
+
+/* ── device frame ───────────────────────────────────────────── */
+.phone{
+  --sp:#F4F5F8;
+  --sc:#FFFFFF;
+  --smute:#EFF1F5;
+  --si:#0E1116;
+  --sis:#333A45;
+  --sm:#5A6472;
+  --sf:#6B7482;
+  --sl:#E7EAF0;
+  --sls:#D5DAE3;
+  --sa:#4F46E5;
+  --sas:#EEF0FF;
+  --sal:#DDE0FF;
+  --sw:#B45309;
+  --sws:#FEF3E2;
+  --spanel:#161B25;
+  --spanels:#A6AFBE;
+  width:360px;max-width:100%;height:760px;padding:6px;border-radius:42px;
+  background:#0B0D12;box-shadow:var(--frame-shadow);
+}
+.screen{
+  position:relative;height:100%;border-radius:36px;overflow:hidden;
+  background:var(--sp);color:var(--si);font-family:var(--sans);
+  display:flex;flex-direction:column;
+}
+.statusbar{
+  height:30px;flex:none;display:flex;align-items:center;justify-content:space-between;
+  padding-inline:22px;font-size:12px;font-weight:600;letter-spacing:.01em;
+  font-variant-numeric:tabular-nums;color:var(--si);
+}
+.sys{width:50px;height:12px;color:var(--si);opacity:.9}
+.viewport{position:relative;flex:1;overflow:hidden}
+.pagebody{height:100%;overflow:hidden;padding:4px 20px 0}
+.pagebody.home{display:flex;flex-direction:column}
+
+/* ── generic screen type ────────────────────────────────────── */
+.s-display{font-size:28px;line-height:36px;font-weight:700;letter-spacing:-.02em;margin:0;color:var(--si)}
+.s-title{font-size:17px;line-height:24px;font-weight:600;letter-spacing:-.01em;margin:0;color:var(--si)}
+.s-body{font-size:15px;line-height:23px;margin:0;color:var(--sm)}
+.s-caption{font-size:12.5px;line-height:18px;margin:0;color:var(--sf)}
+.one-line{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.clamp2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.clamp3{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
+.ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none;display:block}
+.ic-sm{width:14px;height:14px}
+.ic-fill{fill:currentColor;stroke:none}
+
+/* ── floating tab bar ───────────────────────────────────────── */
+.tabbar{
+  position:absolute;left:16px;right:16px;bottom:14px;height:64px;z-index:4;
+  display:flex;align-items:center;padding-inline:6px;border-radius:24px;
+  background:var(--sc);border:1px solid var(--sl);
+  box-shadow:0 18px 40px -14px rgba(15,23,42,.34),0 2px 6px rgba(15,23,42,.05);
+}
+.tab{flex:1;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.tabpill{width:48px;height:28px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:var(--sf)}
+.tab.active .tabpill{background:var(--sas);color:var(--sa)}
+.tablabel{font-size:11px;line-height:15px;color:var(--sf)}
+.tab.active .tablabel{color:var(--sa);font-weight:600}
+.fade{
+  position:absolute;left:0;right:0;bottom:0;height:116px;z-index:3;pointer-events:none;
+  background:linear-gradient(to bottom,rgba(244,245,248,0) 0%,rgba(244,245,248,.94) 58%,#F4F5F8 100%);
+}
+
+/* ── home ───────────────────────────────────────────────────── */
+.brandbar{height:44px;padding-top:6px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:8px}
+.mark{width:28px;height:28px;border-radius:9px;background:var(--sa);color:#fff;display:flex;align-items:center;justify-content:center}
+.mark .ic{width:15px;height:15px}
+.brandname{font-size:20px;font-weight:700;letter-spacing:-.02em;color:var(--si)}
+.localchip{height:26px;padding-inline:10px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--sl);border-radius:999px;background:rgba(255,255,255,.72);font-size:11px;color:var(--sm)}
+.localchip .ic{width:12px;height:12px;color:var(--sa)}
+
+.hero{margin-top:30px}
+.hero h2{margin-top:0}
+.hero h2 .em{color:var(--sa)}
+.hero-lede{margin-top:8px;color:var(--sm)}
+
+.fields{margin-top:18px;display:flex;flex-direction:column;gap:12px}
+.searchbar{
+  height:56px;border-radius:999px;background:var(--sc);border:1.5px solid transparent;
+  display:flex;align-items:center;gap:12px;padding-inline:16px 6px;
+  box-shadow:0 1px 2px rgba(16,24,40,.04),0 10px 24px -16px rgba(16,24,40,.4);
+  color:var(--sf);
+}
+.searchbar .ic{width:20px;height:20px;color:var(--sf)}
+.searchbar .ph{flex:1;min-width:0;font-size:15px;color:var(--sf)}
+.searchbar.focused{border-color:var(--sa);box-shadow:0 0 0 4px var(--sas),0 10px 24px -16px rgba(79,70,229,.35)}
+.searchbar.focused .ic{color:var(--sa)}
+.searchbar .query{flex:1;min-width:0;font-size:15px;color:var(--si);font-weight:500}
+.clearbtn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--sf);flex:none}
+.clearbtn .ic{width:18px;height:18px}
+.roundbtn{
+  width:44px;height:44px;border-radius:50%;flex:none;
+  background:var(--sa);color:#fff;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 6px 14px -6px rgba(79,70,229,.55);
+}
+.roundbtn.disabled{background:var(--sls);box-shadow:none}
+.roundbtn .ic{width:20px;height:20px;stroke-width:2}
+
+.softicon{width:36px;height:36px;border-radius:12px;background:var(--sas);color:var(--sa);display:flex;align-items:center;justify-content:center;flex:none}
+.softicon .ic{width:20px;height:20px}
+.softicon.gray{background:var(--smute);color:var(--sis)}
+
+/* 首页只做两件事：提问、收藏。两块等高的操作面撑满版面，没有多余内容。 */
+.home-actions{
+  flex:1;min-height:0;margin-top:26px;padding-bottom:126px;
+  display:flex;flex-direction:column;gap:14px;
+}
+.actioncard{
+  flex:1;min-height:170px;padding:20px;border-radius:24px;
+  display:flex;flex-direction:column;gap:14px;
+  background:var(--sc);border:1px solid #EEF0F4;
+}
+.actioncard.ask{
+  flex:1.12;
+  box-shadow:0 1px 2px rgba(16,24,40,.03),0 18px 34px -26px rgba(16,24,40,.55);
+  border-color:transparent;
+}
+.actioncard.save{flex:.88}
+.ac-head{display:flex;align-items:center;gap:12px}
+.ac-title{font-size:17px;line-height:24px;font-weight:600;letter-spacing:-.01em;color:var(--si)}
+.ac-sub{font-size:12.5px;line-height:18px;color:var(--sf);margin-top:1px}
+.ac-field{
+  flex:1;min-height:88px;
+  display:flex;align-items:flex-end;gap:8px;
+  padding:14px;border-radius:18px;background:var(--smute);
+}
+.ac-ph{
+  flex:1;min-width:0;align-self:flex-start;
+  font-size:15.5px;line-height:24px;color:var(--sf);
+  overflow-wrap:anywhere;
+}
+.actioncard.save .ac-field{align-items:center}
+.ac-ph.url{
+  align-self:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font-size:14.5px;
+}
+
+.sectionhead{margin-top:24px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.sectiontitle{font-size:16px;font-weight:600;letter-spacing:-.01em;color:var(--si)}
+.viewall{display:inline-flex;align-items:center;gap:2px;font-size:12.5px;font-weight:600;color:var(--sa)}
+.viewall .ic{width:14px;height:14px;stroke-width:2.2}
+
+.cards{display:flex;flex-direction:column;gap:12px}
+.doc{
+  display:flex;gap:12px;padding:16px;border-radius:20px;background:var(--sc);
+  border:1px solid #EEF0F4;
+  box-shadow:0 1px 2px rgba(16,24,40,.03),0 10px 24px -22px rgba(16,24,40,.5);
+}
+.doc.stacked{display:block}
+.doc-top{display:flex;gap:12px}
+.avatar{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;flex:none;font-size:16px;font-weight:700}
+.t-indigo{background:#EEF0FF;color:#4338CA}
+.t-teal{background:#E7F4F0;color:#0F766E}
+.t-amber{background:#FDF1E7;color:#B45309}
+.t-pink{background:#FDEDF2;color:#BE185D}
+.t-blue{background:#EAF2FE;color:#1D4ED8}
+.t-violet{background:#F3EDFD;color:#6D28D9}
+.docbody{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.doc-title{font-size:15px;line-height:22px;font-weight:600;letter-spacing:-.01em;color:var(--si)}
+.doc-summary{font-size:13px;line-height:20px;color:var(--sm)}
+.doc-meta{margin-top:3px;display:flex;align-items:center;gap:8px;font-size:11.5px;line-height:16px;color:var(--sf)}
+.status{display:inline-flex;align-items:center;gap:5px;height:21px;padding-inline:8px;border-radius:999px;font-size:10.5px;font-weight:600;white-space:nowrap}
+.status.working{background:var(--sws);color:var(--sw)}
+.status .dot{width:5px;height:5px;border-radius:50%;background:currentColor;animation:breathe 1.9s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── search results ─────────────────────────────────────────── */
+.brandbar.compact{height:40px;padding-top:2px}
+.searchhead{margin-top:14px}
+.resulthead{margin-top:20px}
+.resultcount{font-size:13px;color:var(--sm)}
+.resultcount b{color:var(--si);font-weight:700}
+.match{
+  margin-top:12px;margin-left:52px;padding:12px;border-radius:14px;
+  background:var(--sas);border:1px solid var(--sal);
+  display:flex;flex-direction:column;gap:4px;
+}
+.match-head{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--sa)}
+.match-head .ic{width:13px;height:13px}
+.match-text{font-size:13px;line-height:20px;color:var(--sis)}
+.match-ex{font-size:12px;line-height:19px;color:var(--sm)}
+
+/* ── documents ──────────────────────────────────────────────── */
+.dochead{padding-top:10px}
+.dochead .s-caption{margin-top:3px}
+.filterbar{
+  margin-top:14px;height:52px;border-radius:999px;background:var(--sc);
+  display:flex;align-items:center;gap:10px;padding-inline:16px;
+  box-shadow:0 1px 2px rgba(16,24,40,.04),0 10px 24px -16px rgba(16,24,40,.4);
+  color:var(--sf);
+}
+.filterbar .ic{width:18px;height:18px;color:var(--sf)}
+.filterbar .ph{font-size:15px;color:var(--sf)}
+.listpanel{
+  margin-top:16px;background:var(--sc);border:1px solid #EEF0F4;border-radius:20px;overflow:hidden;
+  box-shadow:0 1px 2px rgba(16,24,40,.03),0 10px 24px -22px rgba(16,24,40,.5);
+}
+.listrow{position:relative;display:flex;align-items:center;gap:12px;padding:14px 14px 14px 16px}
+.listrow + .listrow::before{content:"";position:absolute;top:0;left:68px;right:16px;height:1px;background:#F0F2F6}
+.rowbody{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.rowtitle{font-size:14.5px;line-height:21px;font-weight:600;letter-spacing:-.01em;color:var(--si);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rowmeta{font-size:11.5px;line-height:16px;color:var(--sf);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rowchev{width:16px;height:16px;color:var(--sls);flex:none}
+
+/* ── settings ───────────────────────────────────────────────── */
+.settings-body .s-display{margin-top:8px}
+.statspanel{
+  margin-top:16px;border-radius:20px;background:var(--spanel);color:#fff;padding:16px 18px;
+  box-shadow:0 20px 34px -24px rgba(15,23,42,.75);
+}
+.panel-top{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:500;color:var(--spanels)}
+.panel-top .ic{width:16px;height:16px;color:var(--spanels)}
+.panel-value{margin-top:6px;font-size:32px;line-height:36px;font-weight:700;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+.panel-unit{margin-left:5px;font-size:13px;font-weight:500;letter-spacing:0;color:var(--spanels)}
+.panel-bar{margin-top:14px;height:4px;border-radius:999px;background:rgba(255,255,255,.12);overflow:hidden}
+.panel-bar span{display:block;height:100%;border-radius:999px;background:#7C77FF}
+.panel-foot{margin-top:10px;font-size:11.5px;line-height:17px;color:var(--spanels);font-variant-numeric:tabular-nums}
+.grouplabel{margin:18px 0 8px 4px;font-size:12px;font-weight:500;color:var(--sf)}
+.groupcard{
+  background:var(--sc);border:1px solid #EEF0F4;border-radius:20px;padding:16px;
+  box-shadow:0 1px 2px rgba(16,24,40,.03),0 10px 24px -22px rgba(16,24,40,.5);
+}
+.switchrow{display:flex;align-items:center;gap:12px;min-height:48px}
+.switchrow .rowbody{gap:3px}
+.switch{width:46px;height:28px;border-radius:999px;background:var(--sa);padding:3px;display:flex;justify-content:flex-end;flex:none}
+.knob{width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.28)}
+.divider{height:1px;background:var(--sl);margin:10px 0}
+.field{display:flex;flex-direction:column;gap:4px;padding-block:2px}
+.flabel{font-size:12px;font-weight:600;color:var(--sm)}
+.mockinput{
+  min-height:42px;border-radius:14px;background:var(--smute);
+  display:flex;align-items:center;padding-inline:12px;
+  font-size:13px;color:var(--si);letter-spacing:-.01em;
+}
+.mockinput.masked{font-family:var(--mono);font-size:12px;letter-spacing:.08em;color:var(--sm)}
+.fhint{font-size:11px;line-height:16px;color:var(--sf)}
+.actions{display:flex;gap:8px;margin-top:8px}
+.btn-primary,.btn-secondary{
+  flex:1;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:600;
+}
+.btn-primary{background:var(--sa);color:#fff;box-shadow:0 6px 14px -8px rgba(79,70,229,.7)}
+.btn-secondary{background:var(--sc);color:var(--si);border:1px solid var(--sls)}
+.datarow{display:flex;align-items:center;gap:12px;padding-block:4px}
+
+/* ── detail ─────────────────────────────────────────────────── */
+.detail-top{height:52px;padding-top:4px;display:flex;align-items:center;justify-content:space-between}
+.iconbtn{
+  width:40px;height:40px;border-radius:14px;background:var(--sc);border:1px solid var(--sl);
+  display:flex;align-items:center;justify-content:center;color:var(--si);
+  box-shadow:0 1px 2px rgba(16,24,40,.04);
+}
+.iconbtn .ic{width:20px;height:20px}
+.detail-top .label{font-size:14px;font-weight:600;letter-spacing:-.01em}
+.detail-scroll{height:100%;overflow:hidden;padding-bottom:96px}
+.domainchip{
+  display:inline-flex;align-items:center;gap:4px;height:24px;padding-inline:10px;
+  border-radius:999px;background:var(--sas);color:var(--sa);font-size:11.5px;font-weight:600;
+}
+.domainchip .ic{width:12px;height:12px}
+.detail-title{margin-top:12px;font-size:24px;line-height:32px;font-weight:700;letter-spacing:-.03em;color:var(--si)}
+.detail-meta{margin-top:8px;font-size:12px;line-height:18px;color:var(--sf)}
+.summary{
+  margin-top:18px;padding:16px;border-radius:20px;background:var(--sas);border:1px solid var(--sal);
+  display:flex;flex-direction:column;gap:7px;
+}
+.summary .label{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--sm)}
+.summary .label .ic{width:14px;height:14px;color:var(--sa)}
+.summary-lead{font-size:15.5px;line-height:24px;font-weight:600;letter-spacing:-.01em;color:var(--si)}
+.summary-long{font-size:13.5px;line-height:22px;color:var(--sis)}
+.kwblock{margin-top:18px}
+.kwlabel{font-size:12px;font-weight:600;color:var(--sm);margin-bottom:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{height:26px;padding-inline:11px;display:inline-flex;align-items:center;border-radius:999px;background:var(--sc);border:1px solid var(--sl);font-size:12px;color:var(--sm)}
+.bodycard{
+  margin-top:18px;padding:16px;border-radius:20px;background:var(--sc);border:1px solid #EEF0F4;
+  box-shadow:0 1px 2px rgba(16,24,40,.03),0 10px 24px -22px rgba(16,24,40,.5);
+}
+.bodycard h3{margin:0 0 8px;font-size:16px;line-height:24px;font-weight:600;letter-spacing:-.01em;color:var(--si)}
+.bodycard p{margin:0 0 12px;font-size:14px;line-height:24px;color:var(--sis)}
+.bodycard p:last-child{margin-bottom:0}
+.detail-actions{
+  position:absolute;left:0;right:0;bottom:0;z-index:4;padding:12px 20px 16px;
+  background:rgba(255,255,255,.95);border-top:1px solid var(--sl);
+  backdrop-filter:blur(12px);
+  box-shadow:0 -12px 28px -22px rgba(15,23,42,.45);
+}
+.detail-actions .btn-primary{width:100%;flex:none;height:48px;font-size:15px;gap:8px}
+.detail-actions .btn-primary .ic{width:18px;height:18px;stroke-width:2}
+
+/* ── delivery notes ─────────────────────────────────────────── */
+.note{margin-top:36px;text-align:center;font-size:12px;line-height:1.7;color:var(--faint)}
+.delivery{margin-top:64px;border-top:1px solid var(--line);padding-top:32px}
+.delivery h2{font-size:20px;letter-spacing:-.02em;margin:6px 0 0}
+.delivery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:32px;margin-top:28px}
+@media (max-width:760px){
+  .delivery-grid{grid-template-columns:1fr;gap:26px}
+}
+.delivery h3{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);margin:0 0 12px}
+.swatches{display:flex;flex-wrap:wrap;gap:10px}
+.sw{width:52px}
+.sw i{display:block;height:38px;border-radius:10px;border:1px solid rgba(15,23,42,.08)}
+.sw span{display:block;margin-top:6px;font-family:var(--mono);font-size:9px;color:var(--faint);letter-spacing:.02em}
+.type-list,.spec-list{display:flex;flex-direction:column;gap:9px;font-size:13px;color:var(--muted)}
+.type-row{display:flex;align-items:baseline;gap:12px}
+.type-size{font-family:var(--mono);font-size:11px;color:var(--accent);width:46px;flex:none}
+.type-name{font-size:13px;color:var(--muted)}
+.spec-list b{color:var(--fg);font-weight:600}
+.delivery p{font-size:12.5px;line-height:1.7;color:var(--faint);margin:14px 0 0}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6.5 4.25h11c.97 0 1.75.78 1.75 1.75v14.2a.75.75 0 0 1-1.16.63L12 16.3l-6.09 4.53a.75.75 0 0 1-1.16-.63V6c0-.97.78-1.75 1.75-1.75Z"/></symbol>
+  <symbol id="i-bookmark-fill" viewBox="0 0 24 24"><path d="M6.5 4.25h11c.97 0 1.75.78 1.75 1.75v14.2a.75.75 0 0 1-1.16.63L12 16.3l-6.09 4.53a.75.75 0 0 1-1.16-.63V6c0-.97.78-1.75 1.75-1.75Z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 10.4 12 4l8 6.4V20a1 1 0 0 1-1 1h-4.5v-6.2h-5V21H5a1 1 0 0 1-1-1v-9.6Z"/></symbol>
+  <symbol id="i-home-fill" viewBox="0 0 24 24"><path d="M4 10.4 12 4l8 6.4V20a1 1 0 0 1-1 1h-4.5v-6.2h-5V21H5a1 1 0 0 1-1-1v-9.6Z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.8-3.5 3.6-5.5 7-5.5s6.2 2 7 5.5"/></symbol>
+  <symbol id="i-person-fill" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6" fill="currentColor" stroke="none"/><path d="M4.5 19.2c1-3.6 4-5.7 7.5-5.7s6.5 2.1 7.5 5.7c.2.6-.3 1.2-.9 1.2H5.4c-.6 0-1.1-.6-.9-1.2Z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+  <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h13.5M13 6.5 18.5 12 13 17.5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="M11.2 3.6 12.9 8.3 17.6 10l-4.7 1.7-1.7 4.7-1.7-4.7L4.8 10l4.7-1.7 1.7-4.7Z" fill="currentColor" stroke="none"/><path d="M18 14.4l.85 2.35 2.35.85-2.35.85L18 20.8l-.85-2.35-2.35-.85 2.35-.85L18 14.4Z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.4 18 5.6v5.1c0 4.2-2.5 7.2-6 9-3.5-1.8-6-4.8-6-9V5.6l6-2.2Z"/><path d="m9.1 11.7 2 2 3.8-4"/></symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9.5 6.5 5.5 5.5-5.5 5.5"/></symbol>
+  <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="M14.5 6.5 9 12l5.5 5.5"/></symbol>
+  <symbol id="i-open" viewBox="0 0 24 24"><path d="M13.5 4.5h6v6M19 5l-7.2 7.2"/><path d="M18 14.2v4.3a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6h4.3"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M4 12h16M12 4c2.2 2.2 3.3 5 3.3 8s-1.1 5.8-3.3 8c-2.2-2.2-3.3-5-3.3-8S9.8 6.2 12 4Z"/></symbol>
+  <symbol id="i-x-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2"/><path d="m9.8 9.8 4.4 4.4M14.2 9.8l-4.4 4.4"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2.2"/><path d="M10.8 17.8h2.4"/></symbol>
+  <symbol id="i-sys" viewBox="0 0 50 12">
+    <path d="M1 8.4h2V11H1zM4.5 6.6h2V11h-2zM8 4.6h2V11H8zM11.5 2.6h2V11h-2z" fill="currentColor" stroke="none"/>
+    <path d="M18.3 4.9a6.6 6.6 0 0 1 8.4 0M20.2 7.2a3.9 3.9 0 0 1 4.6 0M21.9 9.4c.35-.3.85-.3 1.2 0" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
+    <rect x="31.6" y="3.4" width="17" height="8" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.1"/>
+    <rect x="33.6" y="5.2" width="11.6" height="4.4" rx="1.2" fill="currentColor" stroke="none"/>
+    <path d="M49.2 5.8v4.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+  </symbol>
+</svg>
+
+<div class="page">
+  <header class="board-head">
+    <div class="eyebrow">Android · 视觉稿</div>
+    <h1>寻迹 · 界面设计稿</h1>
+    <p class="lede">冷中性画布、白色卡片、单一靛蓝强调色。这一版把底部导航改成悬浮栏，长列表收进一张面板，详情页把「打开原文」固定在底部。</p>
+    <div class="legend">
+      <span><i></i>悬浮标签栏</span>
+      <span><i class="t2"></i>来源色块</span>
+      <span><i class="t3"></i>命中理由</span>
+    </div>
+  </header>
+
+  <div class="frames">
+
+    <!-- 01 HOME -->
+    <figure>
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><svg class="sys"><use href="#i-sys"/></svg></div>
+          <div class="viewport">
+            <div class="pagebody home">
+              <div class="brandbar">
+                <div class="brand">
+                  <span class="mark"><svg class="ic ic-fill"><use href="#i-bookmark-fill"/></svg></span>
+                  <span class="brandname">寻迹</span>
+                </div>
+                <span class="localchip"><svg class="ic"><use href="#i-shield"/></svg>仅本机</span>
+              </div>
+
+              <div class="hero">
+                <h2 class="s-display">今天想<span class="em">找</span>点什么？</h2>
+                <p class="s-body hero-lede">用你记得的那句话，找回存过的内容。</p>
+              </div>
+
+              <div class="home-actions">
+                <section class="actioncard ask">
+                  <div class="ac-head">
+                    <span class="softicon"><svg class="ic"><use href="#i-sparkles"/></svg></span>
+                    <div>
+                      <div class="ac-title">提问</div>
+                      <div class="ac-sub">描述你记得的内容，我来找</div>
+                    </div>
+                  </div>
+                  <div class="ac-field">
+                    <span class="ac-ph">比如：那篇讲睡眠不足为什么会让焦虑加重的文章</span>
+                    <span class="roundbtn"><svg class="ic"><use href="#i-arrow-right"/></svg></span>
+                  </div>
+                </section>
+
+                <section class="actioncard save">
+                  <div class="ac-head">
+                    <span class="softicon"><svg class="ic"><use href="#i-plus"/></svg></span>
+                    <div>
+                      <div class="ac-title">收藏</div>
+                      <div class="ac-sub">粘贴链接，自动抓取正文</div>
+                    </div>
+                  </div>
+                  <div class="ac-field">
+                    <span class="ac-ph url">https://mp.weixin.qq.com/s/FPpUey_5PLDu2…</span>
+                    <span class="roundbtn"><svg class="ic"><use href="#i-arrow-up"/></svg></span>
+                  </div>
+                </section>
+              </div>
+            </div>
+
+            <div class="fade"></div>
+            <nav class="tabbar">
+              <span class="tab active">
+                <span class="tabpill"><svg class="ic ic-fill"><use href="#i-home-fill"/></svg></span>
+                <span class="tablabel">首页</span>
+              </span>
+              <span class="tab">
+                <span class="tabpill"><svg class="ic"><use href="#i-bookmark"/></svg></span>
+                <span class="tablabel">收藏</span>
+              </span>
+              <span class="tab">
+                <span class="tabpill"><svg class="ic"><use href="#i-person"/></svg></span>
+                <span class="tablabel">我的</span>
+              </span>
+            </nav>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <span class="cap-num">01</span>
+        <div>
+          <p class="cap-title">首页</p>
+          <p class="cap-note">首页只有提问和收藏两件事；输入区加高成整块书写面，提问略大于收藏。</p>
+        </div>
+      </figcaption>
+    </figure>
+
+    <!-- 02 SEARCH -->
+    <figure>
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><svg class="sys"><use href="#i-sys"/></svg></div>
+          <div class="viewport">
+            <div class="pagebody">
+              <div class="brandbar compact">
+                <div class="brand">
+                  <span class="mark"><svg class="ic ic-fill"><use href="#i-bookmark-fill"/></svg></span>
+                  <span class="brandname">寻迹</span>
+                </div>
+                <span class="localchip"><svg class="ic"><use href="#i-shield"/></svg>仅本机</span>
+              </div>
+
+              <div class="searchhead">
+                <div class="searchbar focused">
+                  <svg class="ic"><use href="#i-search"/></svg>
+                  <span class="query one-line">讲睡眠和记忆的文章</span>
+                  <span class="clearbtn"><svg class="ic"><use href="#i-x-circle"/></svg></span>
+                  <span class="roundbtn"><svg class="ic"><use href="#i-arrow-right"/></svg></span>
+                </div>
+              </div>
+
+              <div class="sectionhead resulthead">
+                <span class="resultcount">找到 <b>2</b> 条相关</span>
+                <span class="viewall">清除</span>
+              </div>
+
+              <div class="cards">
+                <article class="doc stacked">
+                  <div class="doc-top">
+                    <span class="avatar t-pink">三</span>
+                    <div class="docbody">
+                      <div class="doc-title clamp2">为什么睡眠不足会让焦虑加倍</div>
+                      <div class="doc-meta"><span>公众号 · 3 分钟前</span></div>
+                      <div class="doc-summary clamp2">睡眠剥夺会放大杏仁核的反应，同时削弱前额叶对情绪的抑制。</div>
+                    </div>
+                  </div>
+                  <div class="match">
+                    <div class="match-head"><svg class="ic ic-fill"><use href="#i-sparkles"/></svg>为什么找到它</div>
+                    <div class="match-text">标题与摘要命中「睡眠」「记忆」</div>
+                    <div class="match-ex">「睡眠把白天的经历搬进长期记忆，缺觉时这一步最先受影响。」</div>
+                  </div>
+                </article>
+
+                <article class="doc stacked">
+                  <div class="doc-top">
+                    <span class="avatar t-blue">知</span>
+                    <div class="docbody">
+                      <div class="doc-title clamp2">怎样把读过的内容真正记住</div>
+                      <div class="doc-meta"><span>知乎 · 1 小时前</span></div>
+                      <div class="doc-summary clamp2">记忆不是存储，是每次回忆时重新写一遍。</div>
+                    </div>
+                  </div>
+                  <div class="match">
+                    <div class="match-head"><svg class="ic ic-fill"><use href="#i-sparkles"/></svg>为什么找到它</div>
+                    <div class="match-text">正文提到「记忆」3 处。</div>
+                  </div>
+                </article>
+              </div>
+            </div>
+
+            <div class="fade"></div>
+            <nav class="tabbar">
+              <span class="tab active">
+                <span class="tabpill"><svg class="ic ic-fill"><use href="#i-home-fill"/></svg></span>
+                <span class="tablabel">首页</span>
+              </span>
+              <span class="tab">
+                <span class="tabpill"><svg class="ic"><use href="#i-bookmark"/></svg></span>
+                <span class="tablabel">收藏</span>
+              </span>
+              <span class="tab">
+                <span class="tabpill"><svg class="ic"><use href="#i-person"/></svg></span>
+                <span class="tablabel">我的</span>
+              </span>
+            </nav>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <span class="cap-num">02</span>
+        <div>
+          <p class="cap-title">搜索结果</p>
+          <p class="cap-note">输入框聚焦时整圈靛蓝；命中理由单独成块，和原文摘录一眼可分。</p>
+        </div>
+      </figcaption>
+    </figure>
+
+    <!-- 03 DOCUMENTS -->
+    <figure>
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><svg class="sys"><use href="#i-sys"/></svg></div>
+          <div class="viewport">
+            <div class="pagebody">
+              <div class="dochead">
+                <h2 class="s-display">收藏</h2>
+                <p class="s-caption">128 条内容</p>
+              </div>
+
+              <div class="filterbar">
+                <svg class="ic"><use href="#i-search"/></svg>
+                <span class="ph">筛选收藏……</span>
+              </div>
+
+              <div class="listpanel">
+                <div class="listrow">
+                  <span class="avatar t-pink">三</span>
+                  <div class="rowbody">
+                    <span class="rowtitle">为什么睡眠不足会让焦虑加倍</span>
+                    <span class="rowmeta">公众号 · 3 分钟前</span>
+                  </div>
+                  <svg class="ic rowchev"><use href="#i-chevron-right"/></svg>
+                </div>
+                <div class="listrow">
+                  <span class="avatar t-blue">知</span>
+                  <div class="rowbody">
+                    <span class="rowtitle">一个人如何建立自己的知识系统</span>
+                    <span class="rowmeta">知乎 · 1 小时前</span>
+                  </div>
+                  <svg class="ic rowchev"><use href="#i-chevron-right"/></svg>
+                </div>
+                <div class="listrow">
+                  <span class="avatar t-teal">少</span>
+                  <div class="rowbody">
+                    <span class="rowtitle">我用三年时间，把收藏夹清空了</span>
+                    <span class="rowmeta">少数派 · 昨天</span>
+                  </div>
+                  <svg class="ic rowchev"><use href="#i-chevron-right"/></svg>
+                </div>
+                <div class="listrow">
+                  <span class="avatar t-violet">B</span>
+                  <div class="rowbody">
+                    <span class="rowtitle">一次讲清楚：RAG 到底解决了什么</span>
+                    <span class="rowmeta">Bilibili · 2 天前</span>
+                  </div>
+                  <svg class="ic rowchev"><use href="#i-chevron-right"/></svg>
+                </div>
+                <div class="listrow">
+                  <span class="avatar t-amber">阮</span>
+                  <div class="rowbody">
+                    <span class="rowtitle">科技爱好者周刊（第 320 期）</span>
+                    <span class="rowmeta">阮一峰的网络日志 · 3 天前</span>
+                  </div>
+                  <svg class="ic rowchev"><use href="#i-chevron-right"/></svg>
+                </div>
+                <div class="listrow">
+                  <span class="avatar t-indigo">M</span>
+                  <div class="rowbody">
+                    <span class="rowtitle">正在整理的一篇文章</span>
+                    <span class="rowmeta">公众号 · 刚刚</span>
+                  </div>
+                  <span class="status working"><span class="dot"></span>整理中</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="fade"></div>
+            <nav class="tabbar">
+              <span class="tab">
+                <span class="tabpill"><svg class="ic"><use href="#i-home"/></svg></span>
+                <span class="tablabel">首页</span>
+              </span>
+              <span class="tab active">
+                <span class="tabpill"><svg class="ic ic-fill"><use href="#i-bookmark-fill"/></svg></span>
+                <span class="tablabel">收藏</span>
+              </span>
+              <span class="tab">
+                <span class="tabpill"><svg class="ic"><use href="#i-person"/></svg></span>
+                <span class="tablabel">我的</span>
+              </span>
+            </nav>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <span class="cap-num">03</span>
+        <div>
+          <p class="cap-title">收藏</p>
+          <p class="cap-note">长列表收进一张白色面板，发丝线分隔；来源首字沿用固定色块。</p>
+        </div>
+      </figcaption>
+    </figure>
+
+    <!-- 04 SETTINGS -->
+    <figure>
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><svg class="sys"><use href="#i-sys"/></svg></div>
+          <div class="viewport">
+            <div class="pagebody settings-body">
+              <h2 class="s-display">我的</h2>
+
+              <div class="statspanel">
+                <div class="panel-top">
+                  <span>本机收藏</span>
+                  <svg class="ic"><use href="#i-phone"/></svg>
+                </div>
+                <div class="panel-value">128<span class="panel-unit">条</span></div>
+                <div class="panel-bar"><span style="width:97%"></span></div>
+                <div class="panel-foot">124 篇可检索 · 2 篇整理中 · 2 篇失败</div>
+              </div>
+
+              <div class="grouplabel">大模型（可选）</div>
+              <div class="groupcard">
+                <div class="switchrow">
+                  <div class="rowbody">
+                    <div class="rowtitle">用大模型写摘要</div>
+                    <div class="rowsub">离线抽取摘要和关键词。</div>
+                  </div>
+                  <span class="switch"><span class="knob"></span></span>
+                </div>
+                <div class="divider"></div>
+
+                <div class="field">
+                  <span class="flabel">服务地址</span>
+                  <div class="mockinput one-line">https://api.deepseek.com/v1</div>
+                </div>
+                <div class="field">
+                  <span class="flabel">模型名称</span>
+                  <div class="mockinput">deepseek-chat</div>
+                </div>
+                <div class="field">
+                  <span class="flabel">API Key</span>
+                  <div class="mockinput masked">•••••••••••••••••</div>
+                  <span class="fhint">密钥只写入系统钥匙串，不会上传。</span>
+                </div>
+
+                <div class="actions">
+                  <span class="btn-primary">保存设置</span>
+                  <span class="btn-secondary">测试连接</span>
+                </div>
+              </div>
+
+              <div class="grouplabel">数据</div>
+              <div class="groupcard">
+                <div class="datarow">
+                  <span class="softicon gray"><svg class="ic"><use href="#i-bookmark"/></svg></span>
+                  <div class="rowbody">
+                    <div class="rowtitle">本机存储</div>
+                    <div class="rowsub">正文、摘要和索引都在 xunji.db 里。</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="fade"></div>
+            <nav class="tabbar">
+              <span class="tab">
+                <span class="tabpill"><svg class="ic"><use href="#i-home"/></svg></span>
+                <span class="tablabel">首页</span>
+              </span>
+              <span class="tab">
+                <span class="tabpill"><svg class="ic"><use href="#i-bookmark"/></svg></span>
+                <span class="tablabel">收藏</span>
+              </span>
+              <span class="tab active">
+                <span class="tabpill"><svg class="ic ic-fill"><use href="#i-person-fill"/></svg></span>
+                <span class="tablabel">我的</span>
+              </span>
+            </nav>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <span class="cap-num">04</span>
+        <div>
+          <p class="cap-title">我的</p>
+          <p class="cap-note">本机数据做成深色锚点，数量与可检索状态一次读完；模型设置留在同一张卡里。</p>
+        </div>
+      </figcaption>
+    </figure>
+
+    <!-- 05 DETAIL -->
+    <figure>
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>9:41</span><svg class="sys"><use href="#i-sys"/></svg></div>
+          <div class="viewport">
+            <div class="pagebody">
+              <div class="detail-top">
+                <span class="iconbtn"><svg class="ic"><use href="#i-chevron-left"/></svg></span>
+                <span class="label">收藏详情</span>
+                <span class="iconbtn"><svg class="ic"><use href="#i-open"/></svg></span>
+              </div>
+
+              <div class="detail-scroll">
+                <span class="domainchip"><svg class="ic"><use href="#i-globe"/></svg>mp.weixin.qq.com</span>
+                <h2 class="detail-title">为什么睡眠不足会让焦虑加倍</h2>
+                <p class="detail-meta">公众号 · 三联生活周刊 · 收藏于 10 月 28 日</p>
+
+                <div class="summary">
+                  <div class="label"><svg class="ic ic-fill"><use href="#i-sparkles"/></svg>摘要</div>
+                  <div class="summary-lead">睡眠剥夺会放大杏仁核的反应，同时削弱前额叶对情绪的抑制。</div>
+                  <div class="summary-long">这不是意志力问题，而是大脑在缺觉时失去了刹车。文章给出了三条可操作的调整方法。</div>
+                </div>
+
+                <div class="kwblock">
+                  <div class="kwlabel">关键词</div>
+                  <div class="chips">
+                    <span class="chip">睡眠</span>
+                    <span class="chip">焦虑</span>
+                    <span class="chip">杏仁核</span>
+                    <span class="chip">情绪调节</span>
+                  </div>
+                </div>
+
+                <div class="bodycard">
+                  <h3>缺觉时，大脑先失去刹车</h3>
+                  <p>一整夜不睡之后，受试者看到同一组情绪图片时，杏仁核的活跃度比睡眠充足时高出约 60%。与此同时，前额叶皮层与杏仁核之间的功能连接明显减弱。</p>
+                  <p>换句话说，情绪本身没有变强多少，是抑制情绪的那部分变弱了。</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="detail-actions">
+              <span class="btn-primary"><svg class="ic"><use href="#i-open"/></svg>打开原文</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>
+        <span class="cap-num">05</span>
+        <div>
+          <p class="cap-title">收藏详情</p>
+          <p class="cap-note">摘要先于正文；「打开原文」固定在底部，长文滚到哪都能点。</p>
+        </div>
+      </figcaption>
+    </figure>
+
+  </div>
+
+  <p class="note">手机画面按 360dp 宽绘制，实际显示随系统密度缩放。应用只有浅色主题，本页在深色模式下也保留浅色画面。</p>
+
+  <section class="delivery">
+    <div class="eyebrow">交付</div>
+    <h2>设计变量</h2>
+    <div class="delivery-grid">
+      <div>
+        <h3>色彩</h3>
+        <div class="swatches">
+          <div class="sw"><i style="background:#F4F5F8"></i><span>#F4F5F8</span></div>
+          <div class="sw"><i style="background:#FFFFFF"></i><span>#FFFFFF</span></div>
+          <div class="sw"><i style="background:#0E1116"></i><span>#0E1116</span></div>
+          <div class="sw"><i style="background:#4F46E5"></i><span>#4F46E5</span></div>
+          <div class="sw"><i style="background:#161B25"></i><span>#161B25</span></div>
+        </div>
+        <p>冷灰画布、白卡承载内容；靛蓝只用于可操作项和命中证据。来源色块取同一套低饱和背景。</p>
+      </div>
+      <div>
+        <h3>字阶</h3>
+        <div class="type-list">
+          <div class="type-row"><span class="type-size">28 / 36</span><span class="type-name">页面标题 · 700</span></div>
+          <div class="type-row"><span class="type-size">17 / 24</span><span class="type-name">卡片标题 · 600</span></div>
+          <div class="type-row"><span class="type-size">15 / 23</span><span class="type-name">正文与输入 · 400</span></div>
+          <div class="type-row"><span class="type-size">12.5 / 18</span><span class="type-name">说明与元信息</span></div>
+        </div>
+        <p>系统无衬线，Android 显式使用 sans-serif；标题字距收紧 0.2–0.5，数字用等宽数字。</p>
+      </div>
+      <div>
+        <h3>尺寸</h3>
+        <div class="spec-list">
+          <div><b>圆角</b> · 14 / 20 / 胶囊</div>
+          <div><b>触控</b> · 不小于 44</div>
+          <div><b>边距</b> · 20，区块间距 12 / 24 / 32</div>
+          <div><b>阴影</b> · 卡片一档，悬浮栏与主按钮各一档</div>
+        </div>
+        <p>反馈优先于装饰：输入框聚焦有靛蓝描边，按钮按下有按压态，列表行有原生 ripple。</p>
+      </div>
+    </div>
+  </section>
+</div>
