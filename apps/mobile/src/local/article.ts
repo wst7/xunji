@@ -1,12 +1,15 @@
+import { load } from 'cheerio/slim'
+import type { AnyNode, Element } from 'domhandler'
+
 import { hostOf, oneLine } from './util'
 
 /**
  * 在手机上抓取并抽取正文。
  *
- * 不引入 Readability / jsdom 这类依赖：React Native 里没有 DOMParser，
- * 也不该为了打开一篇文章塞进一个浏览器环境。这里用一套克制的启发式：
- * 优先 <article> / <main>，去掉脚本、导航、页脚，再把常见块级标签
- * 变成 Markdown，交给 App 自己的受限渲染器显示。
+ * 用 cheerio/slim（htmlparser2，纯 JS，不要 DOM 环境）解析 HTML：
+ * 先按选择器挑正文容器，再去掉脚本/导航/按钮，最后把结构转成 Markdown。
+ * 比正则切片可靠：嵌套标签、畸形 HTML、公众号的富文本都能正确走完。
+ * 页面把正文藏在脚本 JSON 里时，还会再按 JSON-LD / Next / Nuxt 状态兜底。
  */
 export interface ExtractedArticle {
   url: string
@@ -24,6 +27,8 @@ export interface ExtractedArticle {
   /** 这只是一张“打开飞书 / Lark 客户端”的跳转页，内容本身不在网页里。 */
   appOnly: boolean
 }
+
+type CheerioDoc = ReturnType<typeof load>
 
 const MAX_HTML_CHARS = 2_000_000
 const FETCH_TIMEOUT_MS = 25_000
@@ -79,132 +84,6 @@ function metaMap(html: string): Map<string, string> {
 function firstMatch(html: string, pattern: RegExp): string | null {
   const match = pattern.exec(html)
   return match?.[1] ? match[1] : null
-}
-
-function stripBlocks(html: string): string {
-  return html
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/<(script|style|noscript|svg|iframe|form|template|nav|header|footer|aside)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
-}
-
-function visibleLength(fragment: string): number {
-  return decodeEntities(fragment.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, '').length
-}
-
-/** 从 start 处的开标签开始，按同名标签配对，切出完整的一段（正文容器常有嵌套 div）。 */
-function sliceBalanced(html: string, start: number, tagName: string): string | null {
-  const tagRe = new RegExp(`<${tagName}\\b[^>]*>|</${tagName}\\s*>`, 'gi')
-  tagRe.lastIndex = start
-  let depth = 0
-  let match: RegExpExecArray | null
-  while ((match = tagRe.exec(html))) {
-    if (match[0][1] === '/') {
-      depth -= 1
-      if (depth === 0) return html.slice(start, match.index)
-    } else {
-      depth += 1
-    }
-  }
-  return null
-}
-
-function findTagStart(html: string, pattern: RegExp): number | null {
-  const match = pattern.exec(html)
-  return match ? match.index : null
-}
-
-// 公众号正文固定放在 #js_content 里；其余是常见的正文容器。
-const WECHAT_CONTENT_START = /<div\b[^>]*\bid\s*=\s*["']js_content["'][^>]*>/i
-const CONTENT_CONTAINER_STARTS = [
-  /<div\b[^>]*\bclass\s*=\s*["'][^"']*\b(?:article-?content|article-?body|post-?content|entry-?content|markdown-?body)\b[^"']*["'][^>]*>/i,
-  /<div\b[^>]*\bid\s*=\s*["'](?:content|article|main-content)["'][^>]*>/i,
-]
-
-function pickBody(html: string): { body: string; wechat: boolean } {
-  const wechatStart = findTagStart(html, WECHAT_CONTENT_START)
-  if (wechatStart !== null) {
-    const body = sliceBalanced(html, wechatStart, 'div')
-    if (body && visibleLength(stripBlocks(body)) >= 80) {
-      return { body: stripBlocks(body), wechat: true }
-    }
-  }
-
-  for (const pattern of CONTENT_CONTAINER_STARTS) {
-    const start = findTagStart(html, pattern)
-    if (start === null) continue
-    const body = sliceBalanced(html, start, 'div')
-    if (body && visibleLength(stripBlocks(body)) >= 200) {
-      return { body: stripBlocks(body), wechat: false }
-    }
-  }
-
-  const candidates = [
-    /<article\b[^>]*>([\s\S]*?)<\/article>/i,
-    /<main\b[^>]*>([\s\S]*?)<\/main>/i,
-    /<body\b[^>]*>([\s\S]*?)<\/body>/i,
-  ]
-  for (const pattern of candidates) {
-    const body = firstMatch(html, pattern)
-    if (!body) continue
-    if (visibleLength(stripBlocks(body)) >= 200) return { body: stripBlocks(body), wechat: false }
-  }
-  return { body: stripBlocks(html), wechat: false }
-}
-
-// 公众号页面正文周围的固定按钮/提示，逐行完全匹配才删，避免误伤正文。
-const WECHAT_NOISE_LINE =
-  /^(?:原创|预览时标签不可点|微信扫一扫|关注该公众号|知道了|使用小程序|取消|允许|分析|不喜欢|轻点两下取消赞|轻点两下取消在看|使用完整服务|在小说阅读器读本章|去阅读|在公众号小说中沉浸阅读|赞|在看|分享|留言|收藏|听过|视频|小程序|上一篇|下一篇)[\s，。！？、]*$/
-const PUNCT_ONLY_LINE = /^[\s，。、；：！？“”‘’"'·…—\-()（）【】]+$/
-
-function toMarkdown(html: string, wechat = false): string {
-  let text = html
-    .replace(/<pre\b[^>]*>([\s\S]*?)<\/pre>/gi, (_whole, code: string) => {
-      const clean = decodeEntities(code.replace(/<[^>]+>/g, '')).trim()
-      return clean ? `\n\n\`\`\`\n${clean}\n\`\`\`\n\n` : ' '
-    })
-    .replace(/<h([1-3])\b[^>]*>([\s\S]*?)<\/h\1>/gi, (_w, _lvl, inner: string) => `\n\n## ${inner.replace(/<[^>]+>/g, ' ')}\n\n`)
-    .replace(/<h[4-6]\b[^>]*>([\s\S]*?)<\/h[4-6]>/gi, (_w, inner: string) => `\n\n### ${inner.replace(/<[^>]+>/g, ' ')}\n\n`)
-    .replace(/<li\b[^>]*>([\s\S]*?)<\/li>/gi, (_w, inner: string) => `\n- ${inner.replace(/<[^>]+>/g, ' ')}`)
-    .replace(/<blockquote\b[^>]*>([\s\S]*?)<\/blockquote>/gi, (_w, inner: string) => `\n> ${inner.replace(/<[^>]+>/g, ' ')}`)
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(p|div|section|article|main|li|blockquote|tr|table|ul|ol)>/gi, '\n\n')
-    .replace(/<[^>]+>/g, ' ')
-
-  text = decodeEntities(text)
-  text = text
-    .split('\n')
-    .map((line) => line.replace(/[ \t ]+/g, ' ').trim())
-    .filter((line) => line.length > 0)
-    .filter((line) => !wechat || (!WECHAT_NOISE_LINE.test(line) && !PUNCT_ONLY_LINE.test(line)))
-    .join('\n')
-  text = text.replace(/\n{3,}/g, '\n\n').trim()
-  return text
-}
-
-function toPlainText(markdown: string): string {
-  return markdown
-    .replace(/```[\s\S]*?```/g, ' ')
-    .replace(/^#{1,3}\s+/gm, '')
-    .replace(/^>\s?/gm, '')
-    .replace(/^-\s+/gm, '')
-    .replace(/[*_`]/g, '')
-    .replace(/\n{2,}/g, '\n')
-    .trim()
-}
-
-/** 正文极少、脚本却很多：内容由 JS 渲染，或者页面只是打开另一个 App 的桥。 */
-function looksScriptOnly(html: string, plainText: string): boolean {
-  if (plainText.length >= 120) return false
-  const scripts = html.match(/<script\b/gi)?.length ?? 0
-  return scripts >= 3
-}
-
-/** 微信/部分站点会先返回验证或“请在客户端打开”的提示页，而不是正文。 */
-function looksBlocked(html: string, plainText: string): boolean {
-  if (plainText.length >= 200) return false
-  if (/环境异常/.test(html) && /验证/.test(html)) return true
-  if (/请在微信客户端打开|访问过于频繁|完成验证后即可继续访问/.test(html)) return true
-  return false
 }
 
 /**
@@ -331,50 +210,375 @@ function embeddedArticleData(html: string): EmbeddedArticleData {
   return result
 }
 
+// ── HTML → Markdown（基于 cheerio 的 DOM 遍历）────────────────────────────
+
+function isTag(node: AnyNode): node is Element {
+  return node.type === 'tag'
+}
+
+function rawText(node: AnyNode): string {
+  if (node.type === 'text') return node.data
+  if (!('children' in node) || !node.children) return ''
+  return node.children.map(rawText).join('')
+}
+
+/** 行内内容：保留粗体/斜体/行内代码/链接，压掉多余空白。 */
+function renderInline(node: AnyNode): string {
+  if (node.type === 'text') return node.data.replace(/[ \t\r\n ]+/g, ' ')
+  if (!isTag(node)) return ''
+  const name = node.name.toLowerCase()
+  const inner = () => node.children.map(renderInline).join('')
+  const flat = () => inner().replace(/[ \t ]+/g, ' ').trim()
+
+  switch (name) {
+    case 'br':
+      return '\n'
+    case 'strong':
+    case 'b': {
+      const text = flat()
+      return text ? `**${text}**` : ''
+    }
+    case 'em':
+    case 'i': {
+      const text = flat()
+      return text ? `_${text}_` : ''
+    }
+    case 'code':
+      return `\`${flat()}\``
+    case 'a': {
+      const text = flat()
+      if (!text) return ''
+      const href = node.attribs?.href ?? ''
+      return /^https?:\/\//i.test(href) ? `[${text}](${href})` : text
+    }
+    case 'img': {
+      const alt = node.attribs?.alt?.trim()
+      return alt ? ` ${alt} ` : ' '
+    }
+    default:
+      return inner()
+  }
+}
+
+function inlineText(children: AnyNode[]): string {
+  return children.map(renderInline).join('').replace(/[ \t ]+/g, ' ').trim()
+}
+
+// 公众号这类站点常拿 <section>/<div> 当段落，正文里根本没有 <p>。
+// 没有块级子元素时，把整个容器当成一段，否则逐块递归。
+const BLOCK_TAGS = new Set([
+  'p',
+  'div',
+  'section',
+  'article',
+  'main',
+  'header',
+  'footer',
+  'aside',
+  'nav',
+  'ul',
+  'ol',
+  'li',
+  'blockquote',
+  'pre',
+  'table',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'hr',
+  'figure',
+  'figcaption',
+  'form',
+  'dl',
+  'dt',
+  'dd',
+])
+
+function hasBlockChild(node: Element): boolean {
+  return node.children.some((child) => isTag(child) && BLOCK_TAGS.has(child.name.toLowerCase()))
+}
+
+function renderTable(table: Element): string {
+  const rows: string[] = []
+  for (const tr of table.children) {
+    if (!isTag(tr) || tr.name.toLowerCase() !== 'tr') continue
+    const cells = tr.children
+      .filter((cell): cell is Element => isTag(cell) && /^(?:td|th)$/i.test(cell.name))
+      .map((cell) => inlineText(cell.children))
+      .filter((text) => text.length > 0)
+    if (cells.length > 0) rows.push(cells.join(' | '))
+  }
+  return rows.length > 0 ? `\n\n${rows.join('\n')}\n\n` : ''
+}
+
+/** 块级内容：标题、段落、列表、引用、代码块、表格。 */
+function renderBlock(node: AnyNode): string {
+  if (node.type === 'text') return node.data.replace(/[ \t\r\n ]+/g, ' ')
+  if (!isTag(node)) return ''
+
+  const name = node.name.toLowerCase()
+  switch (name) {
+    case 'h1':
+    case 'h2':
+    case 'h3': {
+      const text = inlineText(node.children)
+      return text ? `\n\n## ${text}\n\n` : ''
+    }
+    case 'h4':
+    case 'h5':
+    case 'h6': {
+      const text = inlineText(node.children)
+      return text ? `\n\n### ${text}\n\n` : ''
+    }
+    case 'p': {
+      const text = inlineText(node.children)
+      return text ? `\n\n${text}\n\n` : ''
+    }
+    case 'br':
+      return '\n'
+    case 'li': {
+      const text = inlineText(node.children)
+      return text ? `\n- ${text}` : ''
+    }
+    case 'blockquote': {
+      const text = inlineText(node.children)
+      return text ? `\n\n> ${text}\n\n` : ''
+    }
+    case 'pre': {
+      const code = rawText(node).replace(/^\n+|\n+$/g, '')
+      return code ? `\n\n\`\`\`\n${code}\n\`\`\`\n\n` : ''
+    }
+    case 'hr':
+      return '\n\n---\n\n'
+    case 'img': {
+      const alt = node.attribs?.alt?.trim()
+      return alt ? `\n\n${alt}\n\n` : ''
+    }
+    case 'figcaption': {
+      const text = inlineText(node.children)
+      return text ? `\n\n${text}\n\n` : ''
+    }
+    case 'table':
+      return renderTable(node)
+    default: {
+      if (!hasBlockChild(node)) {
+        const text = inlineText(node.children)
+        return text ? `\n\n${text}\n\n` : ''
+      }
+      return node.children.map(renderBlock).join('')
+    }
+  }
+}
+
+function renderMarkdown(node: AnyNode): string {
+  if ('children' in node && node.children) return node.children.map(renderBlock).join('')
+  return renderBlock(node)
+}
+
+// 公众号页面正文周围的固定按钮/提示，逐行完全匹配才删，避免误伤正文。
+const WECHAT_NOISE_LINE =
+  /^(?:原创|预览时标签不可点|微信扫一扫|关注该公众号|知道了|使用小程序|取消|允许|分析|不喜欢|轻点两下取消赞|轻点两下取消在看|使用完整服务|在小说阅读器读本章|去阅读|在公众号小说中沉浸阅读|赞|在看|分享|留言|收藏|听过|视频|小程序|上一篇|下一篇)[\s，。！？、]*$/
+const PUNCT_ONLY_LINE = /^[\s，。、；：！？“”‘’"'·…—\-()（）【】]+$/
+
+function tidyMarkdown(markdown: string, wechat: boolean): string {
+  const lines: string[] = []
+  let inFence = false
+  for (const raw of markdown.split('\n')) {
+    if (/^```/.test(raw.trim())) {
+      inFence = !inFence
+      lines.push('```')
+      continue
+    }
+    if (inFence) {
+      lines.push(raw.replace(/\s+$/, ''))
+      continue
+    }
+    const line = raw.replace(/[ \t ]+/g, ' ').trim()
+    if (!line) {
+      lines.push('')
+      continue
+    }
+    if (wechat && (WECHAT_NOISE_LINE.test(line) || PUNCT_ONLY_LINE.test(line))) continue
+    lines.push(line)
+  }
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+function toPlainText(markdown: string): string {
+  return markdown
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/^#{1,3}\s+/gm, '')
+    .replace(/^>\s?/gm, '')
+    .replace(/^-\s+/gm, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/[*_`~]/g, '')
+    .replace(/\n{2,}/g, '\n')
+    .trim()
+}
+
+// 正文容器：公众号固定 #js_content，其余按常见块挑“文字最多”的一个。
+const CONTENT_SELECTORS = [
+  'article',
+  'main',
+  '[class*="article-content"]',
+  '[class*="article_content"]',
+  '[class*="article-body"]',
+  '[class*="article_body"]',
+  '[class*="post-content"]',
+  '[class*="post_content"]',
+  '[class*="entry-content"]',
+  '[class*="entry_content"]',
+  '[class*="markdown-body"]',
+  '[class*="rich_media_content"]',
+  '#content',
+  '#article',
+  '#main-content',
+]
+
+const NOISE_SELECTOR = [
+  'script',
+  'style',
+  'noscript',
+  'svg',
+  'iframe',
+  'form',
+  'template',
+  'nav',
+  'header',
+  'footer',
+  'aside',
+  'button',
+  'input',
+  'select',
+  'textarea',
+  'canvas',
+  'video',
+  'audio',
+  '[hidden]',
+].join(', ')
+
+// 公众号底部的二维码、工具栏、赞赏、推荐卡片——都在正文容器里，但不是正文。
+const WECHAT_NOISE_SELECTOR = [
+  '#js_pc_qr_code',
+  '.qr_code_pc',
+  '.rich_media_tool',
+  '#js_article_bottom_bar',
+  '.rich_media_area_extra',
+  '#js_comment_area',
+  '.discuss_container',
+  '[class*="weui-"]',
+  '[style*="display:none"]',
+  '[style*="visibility:hidden"]',
+].join(', ')
+
+function textLength($: CheerioDoc, node: AnyNode): number {
+  return $(node).text().replace(/\s+/g, '').length
+}
+
+/** 链接文字几乎不计入正文：导航、相关阅读、页脚链接多的容器会被排到后面。 */
+function proseLength($: CheerioDoc, node: AnyNode): number {
+  const total = textLength($, node)
+  const linked = $(node).find('a').text().replace(/\s+/g, '').length
+  return total - linked
+}
+
+function pickBody($: CheerioDoc): { node: AnyNode; wechat: boolean } {
+  const wechat = $('#js_content').first()[0]
+  if (wechat && textLength($, wechat) >= 80) return { node: wechat, wechat: true }
+
+  let best: AnyNode | null = null
+  let bestLength = 0
+  for (const selector of CONTENT_SELECTORS) {
+    $(selector).each((_, element) => {
+      const length = proseLength($, element)
+      if (length > bestLength) {
+        bestLength = length
+        best = element
+      }
+    })
+  }
+  if (best && bestLength >= 200) return { node: best, wechat: false }
+
+  return { node: $('body').first()[0] ?? $.root()[0], wechat: false }
+}
+
+function stripNoise($: CheerioDoc, node: AnyNode, wechat: boolean): void {
+  const scope = $(node)
+  scope.find(NOISE_SELECTOR).remove()
+  if (wechat) scope.find(WECHAT_NOISE_SELECTOR).remove()
+}
+
+/** 正文极少、脚本却很多：内容由 JS 渲染，或者页面只是打开另一个 App 的桥。 */
+function looksScriptOnly(html: string, plainText: string): boolean {
+  if (plainText.length >= 120) return false
+  const scripts = html.match(/<script\b/gi)?.length ?? 0
+  return scripts >= 3
+}
+
+/** 微信/部分站点会先返回验证或“请在客户端打开”的提示页，而不是正文。 */
+function looksBlocked(html: string, plainText: string): boolean {
+  if (plainText.length >= 200) return false
+  if (/环境异常/.test(html) && /验证/.test(html)) return true
+  if (/请在微信客户端打开|访问过于频繁|完成验证后即可继续访问/.test(html)) return true
+  return false
+}
+
 // 飞书 / Lark 的 applink：/client/message/link/open 这类地址只是“拉起客户端”的跳板，
 // 正文在 App 内、需要登录和会话权限，网页端不分发任何内容。
-const APP_ONLY_HOST = /^(?:applink\.feishu\.cn|applink\.larksuite\.com|larksuite\.com)$/i
-
 function looksAppOnly(url: string, plainText: string): boolean {
   if (plainText.length >= 200) return false
   const host = hostOf(url)
   if (/^applink\.(?:feishu\.cn|larksuite\.com)$/i.test(host)) return true
-  return APP_ONLY_HOST.test(host) && /\/client\//i.test(url)
+  return /^(?:feishu\.cn|larksuite\.com)$/i.test(host) && /\/client\//i.test(url)
 }
 
 export function extractFromHtml(html: string, url: string): ExtractedArticle {
   const meta = metaMap(html)
   const embedded = embeddedArticleData(html)
-  const wechatTitle = firstMatch(html, /<h1\b[^>]*\bid\s*=\s*["']activity-name["'][^>]*>([\s\S]*?)<\/h1>/i)
-  const rawTitle = wechatTitle
-    ?? firstMatch(html, /<h1\b[^>]*\bitemprop\s*=\s*["']headline["'][^>]*>([\s\S]*?)<\/h1>/i)
+  const $ = load(html)
+
+  const domText = (selector: string) => oneLine($(selector).first().text(), 220) || null
+
+  const rawTitle =
+    domText('#activity-name')
+    ?? domText('h1[itemprop="headline"]')
     ?? meta.get('og:title')
     ?? meta.get('twitter:title')
-    ?? firstMatch(html, /<title\b[^>]*>([\s\S]*?)<\/title>/i)
-    ?? firstMatch(html, /<h1\b[^>]*>([\s\S]*?)<\/h1>/i)
+    ?? domText('title')
+    ?? domText('h1')
     ?? embedded.title
   const title = rawTitle ? oneLine(decodeEntities(rawTitle.replace(/<[^>]+>/g, ' ')), 220) : null
 
   const description =
     meta.get('og:description') ?? meta.get('description') ?? meta.get('twitter:description') ?? embedded.description ?? null
   const siteName = meta.get('og:site_name') ?? hostOf(url)
-  const wechatAccount = firstMatch(html, /<a\b[^>]*\bid\s*=\s*["']js_name["'][^>]*>([\s\S]*?)<\/a>/i)
   const author =
     meta.get('article:author')
     ?? meta.get('author')
     ?? embedded.author
-    ?? (wechatAccount ? decodeEntities(wechatAccount.replace(/<[^>]+>/g, ' ')).trim() : null)
+    ?? domText('#js_name')
   const language = firstMatch(html, /<html\b[^>]*\blang\s*=\s*["']([^"']+)["']/i)
 
-  const picked = pickBody(html)
-  let markdown = toMarkdown(picked.body, picked.wechat)
+  const picked = pickBody($)
+  stripNoise($, picked.node, picked.wechat)
+  let markdown = tidyMarkdown(renderMarkdown(picked.node), picked.wechat)
   let plainText = toPlainText(markdown)
 
   // 页面外壳没渲染出正文时，按“已有信息量”从大到小再试三轮。
   if (plainText.length < 120) {
-    const noscript = firstMatch(html, /<noscript\b[^>]*>([\s\S]*?)<\/noscript>/i)
-    if (noscript && visibleLength(noscript) >= 200) {
-      const candidate = toMarkdown(stripBlocks(noscript), false)
+    const noscript = $('noscript')
+      .map((_, element) => $(element).text())
+      .get()
+      .join('\n')
+      .trim()
+    if (noscript.length >= 200 && /<\w+/.test(noscript)) {
+      const inner = load(noscript)
+      const node = inner('body').first()[0] ?? inner.root()[0]
+      stripNoise(inner, node, false)
+      const candidate = tidyMarkdown(renderMarkdown(node), false)
       const candidateText = toPlainText(candidate)
       if (candidateText.length > plainText.length + 80) {
         markdown = candidate
@@ -384,7 +588,12 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
   }
 
   if (plainText.length < 120 && embedded.body) {
-    const candidate = embedded.body.includes('<') ? toMarkdown(embedded.body, false) : toMarkdown(embedded.body.replace(/&/g, '&amp;').replace(/</g, '&lt;'), false)
+    const asHtml = embedded.body.includes('<')
+      ? embedded.body
+      : embedded.body.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    const inner = load(asHtml)
+    const node = inner('body').first()[0] ?? inner.root()[0]
+    const candidate = tidyMarkdown(renderMarkdown(node), false)
     const candidateText = toPlainText(candidate)
     if (candidateText.length > plainText.length) {
       markdown = candidate
