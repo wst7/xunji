@@ -18,6 +18,7 @@
     "@xunji/shared": "*",
     "expo": "~58.0.19",
     "expo-build-properties": "~58.0.11",
+    "expo-clipboard": "~58.0.4",
     "expo-constants": "~58.0.13",
     "expo-linking": "~58.0.14",
     "expo-router": "~58.0.26",

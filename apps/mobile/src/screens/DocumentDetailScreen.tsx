@@ -248,7 +248,15 @@ export function DocumentDetailScreen() {
           {bodySource ? (
             <Markdown source={bodySource} />
           ) : (
-            <Text style={styles.emptyBody}>正文暂时无法读取，原始链接始终为你保留。</Text>
+            <Text style={styles.emptyBody}>
+              {doc.parse_error_code === 'APP_ONLY_LINK'
+                ? '这条内容在飞书 App 里。标题和链接已经保存，点下方「打开原文」可以直接回到飞书查看。'
+                : doc.parse_error_code === 'CONTENT_SCRIPT_ONLY'
+                  ? '这个链接需要在对应的 App 内打开（比如飞书、微信），正文无法直接读取；链接已保留，点下方「打开原文」可以回到原处。'
+                  : doc.parse_error_code === 'FETCH_BLOCKED'
+                    ? '页面要求验证或登录，正文暂时无法读取；原始链接始终为你保留。'
+                    : '正文暂时无法读取，原始链接始终为你保留。'}
+            </Text>
           )}
         </View>
 

@@ -5,6 +5,7 @@ import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 
+import { ClipboardPrompt } from '../src/components/ClipboardPrompt'
 import { getDb } from '../src/local/db'
 import { processPendingQueue } from '../src/local/pipeline'
 import { ToastProvider } from '../src/providers/ToastProvider'
@@ -55,6 +56,7 @@ function RootNavigator() {
         }}
       />
       <ShareIntentBridge />
+      <ClipboardPrompt enabled={ready} />
       {!ready && (
         <View style={styles.splash}>
           <View style={styles.mark}>

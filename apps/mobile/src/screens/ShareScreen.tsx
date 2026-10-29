@@ -14,8 +14,9 @@ import { colors, spacing, type } from '../theme'
 /** 分享进入后的保存结果页：保存到本机一次，然后跳到详情。 */
 export function ShareScreen() {
   const router = useRouter()
-  const params = useLocalSearchParams<{ url?: string | string[] }>()
+  const params = useLocalSearchParams<{ url?: string | string[]; hint?: string | string[] }>()
   const rawUrl = Array.isArray(params.url) ? params.url[0] : params.url
+  const rawHint = Array.isArray(params.hint) ? params.hint[0] : params.hint
   const url = rawUrl && isValidHttpUrl(rawUrl) ? rawUrl : null
   const { toast } = useToast()
 
@@ -29,7 +30,7 @@ export function ShareScreen() {
 
     void (async () => {
       try {
-        const res = await repo.createDocument(url)
+        const res = await repo.createDocument(url, rawHint ?? null)
         if (res.duplicate) {
           toast('这篇内容已经保存过了。')
         } else {
@@ -45,7 +46,7 @@ export function ShareScreen() {
         setError(errorMessage(e, '保存失败，请稍后重试。'))
       }
     })()
-  }, [url, router, toast])
+  }, [url, rawHint, router, toast])
 
   return (
     <Screen>

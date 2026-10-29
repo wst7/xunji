@@ -3,10 +3,11 @@ import { useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { extractHttpUrl, isValidHttpUrl } from '@xunji/shared'
 
+import { titleHintFrom } from '../local/util'
 import { colors, radius, shadow, spacing, type } from '../theme'
 
 interface SaveFieldProps {
-  onSave: (url: string) => Promise<boolean>
+  onSave: (url: string, titleHint: string | null) => Promise<boolean>
   disabled?: boolean
 }
 
@@ -41,7 +42,7 @@ export function SaveField({ onSave, disabled = false }: SaveFieldProps) {
     setError(null)
     setBusy(true)
     try {
-      const accepted = await onSave(detectedUrl)
+      const accepted = await onSave(detectedUrl, titleHintFrom(value, detectedUrl))
       if (accepted) {
         setValue('')
       }

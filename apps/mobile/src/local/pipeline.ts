@@ -52,6 +52,9 @@ async function processOne(id: string, url: string): Promise<void> {
 
   await repo.setStatus(id, 'parsing', 'parse')
 
+  // 网页没给标题时，沿用分享文字/剪贴板里带过来的标题，别把用户已经看到的信息丢掉。
+  if (!article.title) article.title = await repo.getSeededTitle(id)
+
   // 和原来的后端语义一致：正文太短只算部分成功，元信息照常保留。
   if (article.plainText.length < 120) {
     await repo.savePartial(id, article)
