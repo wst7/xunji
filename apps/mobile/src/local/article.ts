@@ -228,13 +228,14 @@ function looksLikeProse(text: string): boolean {
 }
 
 /** 在任意 JSON 结构里找最长的一段正文；宁缺毋滥，太短或不像文章的字符串直接跳过。 */
-function findLongText(value: unknown, depth = 0): string | null {
-  if (depth > 6 || value === null || typeof value !== 'object') return null
+function findLongText(value: unknown, depth = 0, budget = { left: 4000 }): string | null {
+  if (depth > 6 || value === null || typeof value !== 'object' || budget.left <= 0) return null
+  budget.left -= 1
   let best: string | null = null
 
   if (Array.isArray(value)) {
     for (const item of value.slice(0, 40)) {
-      const found = findLongText(item, depth + 1)
+      const found = findLongText(item, depth + 1, budget)
       if (found && (!best || found.length > best.length)) best = found
     }
     return best
@@ -246,7 +247,7 @@ function findLongText(value: unknown, depth = 0): string | null {
         if (!best || item.length > best.length) best = item
       }
     } else if (typeof item === 'object' && item !== null) {
-      const found = findLongText(item, depth + 1)
+      const found = findLongText(item, depth + 1, budget)
       if (found && (!best || found.length > best.length)) best = found
     }
   }
@@ -300,9 +301,9 @@ function embeddedArticleData(html: string): EmbeddedArticleData {
     // JSON-LD 的 Article 节点字段最规整，先按它取元信息。
     const nodes: Record<string, unknown>[] = []
     const collect = (value: unknown, depth = 0) => {
-      if (depth > 5 || value === null || typeof value !== 'object') return
+      if (depth > 5 || nodes.length > 800 || value === null || typeof value !== 'object') return
       if (Array.isArray(value)) {
-        value.forEach((item) => collect(item, depth + 1))
+        value.slice(0, 40).forEach((item) => collect(item, depth + 1))
         return
       }
       nodes.push(value as Record<string, unknown>)
