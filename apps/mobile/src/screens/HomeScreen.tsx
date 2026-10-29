@@ -120,9 +120,9 @@ export function HomeScreen() {
     }
   }
 
-  async function handleSave(url: string): Promise<boolean> {
+  async function handleSave(url: string, titleHint: string | null): Promise<boolean> {
     try {
-      const res = await repo.createDocument(url)
+      const res = await repo.createDocument(url, titleHint)
       if (res.duplicate) {
         toast('这篇内容已经保存过了。', {
           action: {

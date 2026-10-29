@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router'
 import { useShareIntent } from 'expo-share-intent'
 import { extractHttpUrl, isValidHttpUrl } from '@xunji/shared'
 
+import { titleHintFrom } from '../local/util'
 import { useToast } from '../providers/ToastProvider'
 
 /** 只在 development build / 正式包中加载，见 ShareIntentBridge。 */
@@ -36,8 +37,11 @@ export default function NativeShareIntentBridge() {
       return
     }
 
+    // 分享文字里通常带着标题；抓不到正文时用它兜底，而不是只留一串网址。
+    const hint = titleHintFrom(shareIntent.text ?? '', url) ?? shareIntent.meta?.title ?? null
+
     // 不需要登录：直接带着链接进入保存页，数据落在本机。
-    router.replace({ pathname: '/share', params: { url } })
+    router.replace({ pathname: '/share', params: { url, ...(hint ? { hint } : {}) } })
   }, [hasShareIntent, shareIntent, router, toast])
 
   return null

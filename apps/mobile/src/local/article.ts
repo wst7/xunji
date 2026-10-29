@@ -17,6 +17,12 @@ export interface ExtractedArticle {
   language: string | null
   markdown: string
   plainText: string
+  /** 页面只是脚本外壳（内容靠 JS 渲染，或只是打开另一个 App 的桥），正文抓不到。 */
+  scriptOnly: boolean
+  /** 页面要求验证 / 登录，正文拿不到。 */
+  blocked: boolean
+  /** 这只是一张“打开飞书 / Lark 客户端”的跳转页，内容本身不在网页里。 */
+  appOnly: boolean
 }
 
 const MAX_HTML_CHARS = 2_000_000
@@ -81,7 +87,57 @@ function stripBlocks(html: string): string {
     .replace(/<(script|style|noscript|svg|iframe|form|template|nav|header|footer|aside)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ')
 }
 
-function pickBody(html: string): string {
+function visibleLength(fragment: string): number {
+  return decodeEntities(fragment.replace(/<[^>]+>/g, ' ')).replace(/\s+/g, '').length
+}
+
+/** 从 start 处的开标签开始，按同名标签配对，切出完整的一段（正文容器常有嵌套 div）。 */
+function sliceBalanced(html: string, start: number, tagName: string): string | null {
+  const tagRe = new RegExp(`<${tagName}\\b[^>]*>|</${tagName}\\s*>`, 'gi')
+  tagRe.lastIndex = start
+  let depth = 0
+  let match: RegExpExecArray | null
+  while ((match = tagRe.exec(html))) {
+    if (match[0][1] === '/') {
+      depth -= 1
+      if (depth === 0) return html.slice(start, match.index)
+    } else {
+      depth += 1
+    }
+  }
+  return null
+}
+
+function findTagStart(html: string, pattern: RegExp): number | null {
+  const match = pattern.exec(html)
+  return match ? match.index : null
+}
+
+// 公众号正文固定放在 #js_content 里；其余是常见的正文容器。
+const WECHAT_CONTENT_START = /<div\b[^>]*\bid\s*=\s*["']js_content["'][^>]*>/i
+const CONTENT_CONTAINER_STARTS = [
+  /<div\b[^>]*\bclass\s*=\s*["'][^"']*\b(?:article-?content|article-?body|post-?content|entry-?content|markdown-?body)\b[^"']*["'][^>]*>/i,
+  /<div\b[^>]*\bid\s*=\s*["'](?:content|article|main-content)["'][^>]*>/i,
+]
+
+function pickBody(html: string): { body: string; wechat: boolean } {
+  const wechatStart = findTagStart(html, WECHAT_CONTENT_START)
+  if (wechatStart !== null) {
+    const body = sliceBalanced(html, wechatStart, 'div')
+    if (body && visibleLength(stripBlocks(body)) >= 80) {
+      return { body: stripBlocks(body), wechat: true }
+    }
+  }
+
+  for (const pattern of CONTENT_CONTAINER_STARTS) {
+    const start = findTagStart(html, pattern)
+    if (start === null) continue
+    const body = sliceBalanced(html, start, 'div')
+    if (body && visibleLength(stripBlocks(body)) >= 200) {
+      return { body: stripBlocks(body), wechat: false }
+    }
+  }
+
   const candidates = [
     /<article\b[^>]*>([\s\S]*?)<\/article>/i,
     /<main\b[^>]*>([\s\S]*?)<\/main>/i,
@@ -90,13 +146,17 @@ function pickBody(html: string): string {
   for (const pattern of candidates) {
     const body = firstMatch(html, pattern)
     if (!body) continue
-    const stripped = stripBlocks(body).replace(/<[^>]+>/g, ' ')
-    if (decodeEntities(stripped).replace(/\s+/g, '').length >= 200) return stripBlocks(body)
+    if (visibleLength(stripBlocks(body)) >= 200) return { body: stripBlocks(body), wechat: false }
   }
-  return stripBlocks(html)
+  return { body: stripBlocks(html), wechat: false }
 }
 
-function toMarkdown(html: string): string {
+// 公众号页面正文周围的固定按钮/提示，逐行完全匹配才删，避免误伤正文。
+const WECHAT_NOISE_LINE =
+  /^(?:原创|预览时标签不可点|微信扫一扫|关注该公众号|知道了|使用小程序|取消|允许|分析|不喜欢|轻点两下取消赞|轻点两下取消在看|使用完整服务|在小说阅读器读本章|去阅读|在公众号小说中沉浸阅读|赞|在看|分享|留言|收藏|听过|视频|小程序|上一篇|下一篇)[\s，。！？、]*$/
+const PUNCT_ONLY_LINE = /^[\s，。、；：！？“”‘’"'·…—\-()（）【】]+$/
+
+function toMarkdown(html: string, wechat = false): string {
   let text = html
     .replace(/<pre\b[^>]*>([\s\S]*?)<\/pre>/gi, (_whole, code: string) => {
       const clean = decodeEntities(code.replace(/<[^>]+>/g, '')).trim()
@@ -115,6 +175,7 @@ function toMarkdown(html: string): string {
     .split('\n')
     .map((line) => line.replace(/[ \t ]+/g, ' ').trim())
     .filter((line) => line.length > 0)
+    .filter((line) => !wechat || (!WECHAT_NOISE_LINE.test(line) && !PUNCT_ONLY_LINE.test(line)))
     .join('\n')
   text = text.replace(/\n{3,}/g, '\n\n').trim()
   return text
@@ -131,20 +192,210 @@ function toPlainText(markdown: string): string {
     .trim()
 }
 
+/** 正文极少、脚本却很多：内容由 JS 渲染，或者页面只是打开另一个 App 的桥。 */
+function looksScriptOnly(html: string, plainText: string): boolean {
+  if (plainText.length >= 120) return false
+  const scripts = html.match(/<script\b/gi)?.length ?? 0
+  return scripts >= 3
+}
+
+/** 微信/部分站点会先返回验证或“请在客户端打开”的提示页，而不是正文。 */
+function looksBlocked(html: string, plainText: string): boolean {
+  if (plainText.length >= 200) return false
+  if (/环境异常/.test(html) && /验证/.test(html)) return true
+  if (/请在微信客户端打开|访问过于频繁|完成验证后即可继续访问/.test(html)) return true
+  return false
+}
+
+/**
+ * 很多站点（Next.js / Nuxt / 各家 CMS）其实把正文整段塞在 <script> 的 JSON 里，
+ * 只是页面外壳由 JS 渲染。这里把这些“已经跟着 HTML 发过来”的正文挖出来，
+ * 网页自己没渲染出文字时也能存下内容。
+ */
+interface EmbeddedArticleData {
+  title: string | null
+  author: string | null
+  description: string | null
+  body: string | null
+}
+
+const TEXT_KEYS = /^(?:articleBody|article_body|content|body|text|html|richText|rich_text|markdown)$/i
+
+function looksLikeProse(text: string): boolean {
+  const cjk = text.match(/[一-鿿]/g)?.length ?? 0
+  if (cjk >= 30) return true
+  return text.length >= 400 && (text.match(/\s+/g)?.length ?? 0) >= 50
+}
+
+/** 在任意 JSON 结构里找最长的一段正文；宁缺毋滥，太短或不像文章的字符串直接跳过。 */
+function findLongText(value: unknown, depth = 0): string | null {
+  if (depth > 6 || value === null || typeof value !== 'object') return null
+  let best: string | null = null
+
+  if (Array.isArray(value)) {
+    for (const item of value.slice(0, 40)) {
+      const found = findLongText(item, depth + 1)
+      if (found && (!best || found.length > best.length)) best = found
+    }
+    return best
+  }
+
+  for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof item === 'string') {
+      if (TEXT_KEYS.test(key) && item.length >= 120 && looksLikeProse(item)) {
+        if (!best || item.length > best.length) best = item
+      }
+    } else if (typeof item === 'object' && item !== null) {
+      const found = findLongText(item, depth + 1)
+      if (found && (!best || found.length > best.length)) best = found
+    }
+  }
+  return best
+}
+
+function stringField(node: Record<string, unknown>, key: string): string | null {
+  const value = node[key]
+  return typeof value === 'string' && value.trim() ? value : null
+}
+
+function authorName(value: unknown): string | null {
+  if (typeof value === 'string') return value.trim() || null
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const name = authorName(item)
+      if (name) return name
+    }
+    return null
+  }
+  if (value && typeof value === 'object') {
+    const node = value as Record<string, unknown>
+    return stringField(node, 'name') ?? stringField(node, 'author')
+  }
+  return null
+}
+
+function parseJsonLoose(raw: string): unknown {
+  const text = raw.trim().replace(/^<!--|-->$/g, '').trim()
+  if (!text) return null
+  try {
+    return JSON.parse(text)
+  } catch {
+    return null
+  }
+}
+
+function embeddedArticleData(html: string): EmbeddedArticleData {
+  const result: EmbeddedArticleData = { title: null, author: null, description: null, body: null }
+
+  const scripts = [
+    ...Array.from(html.matchAll(/<script\b[^>]*type\s*=\s*["']application\/(?:ld\+json|json)["'][^>]*>([\s\S]*?)<\/script>/gi)),
+    ...Array.from(html.matchAll(/<script\b[^>]*id\s*=\s*["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/gi)),
+    ...Array.from(html.matchAll(/(?:window\.)?__(?:INITIAL_STATE|NUXT|NUXT_DATA|PRELOADED_STATE|APOLLO_STATE)__\s*=\s*(\{[\s\S]*?\});?\s*<\/script>/gi)),
+  ]
+
+  for (const match of scripts) {
+    const data = parseJsonLoose(match[1] ?? '')
+    if (!data) continue
+
+    // JSON-LD 的 Article 节点字段最规整，先按它取元信息。
+    const nodes: Record<string, unknown>[] = []
+    const collect = (value: unknown, depth = 0) => {
+      if (depth > 5 || value === null || typeof value !== 'object') return
+      if (Array.isArray(value)) {
+        value.forEach((item) => collect(item, depth + 1))
+        return
+      }
+      nodes.push(value as Record<string, unknown>)
+      Object.values(value as Record<string, unknown>).forEach((item) => collect(item, depth + 1))
+    }
+    collect(data)
+
+    for (const node of nodes) {
+      const type = node['@type']
+      const types = Array.isArray(type) ? type.map(String) : [String(type ?? '')]
+      const isArticle = types.some((t) => /article|posting|story/i.test(t))
+      if (!isArticle) continue
+      result.title ??= stringField(node, 'headline') ?? stringField(node, 'name')
+      result.author ??= authorName(node.author)
+      result.description ??= stringField(node, 'description')
+      const body = stringField(node, 'articleBody')
+      if (body && looksLikeProse(body) && (!result.body || body.length > result.body.length)) {
+        result.body = body
+      }
+    }
+
+    if (!result.body) result.body = findLongText(data)
+  }
+
+  return result
+}
+
+// 飞书 / Lark 的 applink：/client/message/link/open 这类地址只是“拉起客户端”的跳板，
+// 正文在 App 内、需要登录和会话权限，网页端不分发任何内容。
+const APP_ONLY_HOST = /^(?:applink\.feishu\.cn|applink\.larksuite\.com|larksuite\.com)$/i
+
+function looksAppOnly(url: string, plainText: string): boolean {
+  if (plainText.length >= 200) return false
+  const host = hostOf(url)
+  if (/^applink\.(?:feishu\.cn|larksuite\.com)$/i.test(host)) return true
+  return APP_ONLY_HOST.test(host) && /\/client\//i.test(url)
+}
+
 export function extractFromHtml(html: string, url: string): ExtractedArticle {
   const meta = metaMap(html)
-  const rawTitle = meta.get('og:title') ?? meta.get('twitter:title')
+  const embedded = embeddedArticleData(html)
+  const wechatTitle = firstMatch(html, /<h1\b[^>]*\bid\s*=\s*["']activity-name["'][^>]*>([\s\S]*?)<\/h1>/i)
+  const rawTitle = wechatTitle
+    ?? firstMatch(html, /<h1\b[^>]*\bitemprop\s*=\s*["']headline["'][^>]*>([\s\S]*?)<\/h1>/i)
+    ?? meta.get('og:title')
+    ?? meta.get('twitter:title')
     ?? firstMatch(html, /<title\b[^>]*>([\s\S]*?)<\/title>/i)
     ?? firstMatch(html, /<h1\b[^>]*>([\s\S]*?)<\/h1>/i)
+    ?? embedded.title
   const title = rawTitle ? oneLine(decodeEntities(rawTitle.replace(/<[^>]+>/g, ' ')), 220) : null
 
-  const description = meta.get('og:description') ?? meta.get('description') ?? meta.get('twitter:description') ?? null
+  const description =
+    meta.get('og:description') ?? meta.get('description') ?? meta.get('twitter:description') ?? embedded.description ?? null
   const siteName = meta.get('og:site_name') ?? hostOf(url)
-  const author = meta.get('article:author') ?? meta.get('author') ?? null
+  const wechatAccount = firstMatch(html, /<a\b[^>]*\bid\s*=\s*["']js_name["'][^>]*>([\s\S]*?)<\/a>/i)
+  const author =
+    meta.get('article:author')
+    ?? meta.get('author')
+    ?? embedded.author
+    ?? (wechatAccount ? decodeEntities(wechatAccount.replace(/<[^>]+>/g, ' ')).trim() : null)
   const language = firstMatch(html, /<html\b[^>]*\blang\s*=\s*["']([^"']+)["']/i)
 
-  const markdown = toMarkdown(pickBody(html))
-  const plainText = toPlainText(markdown)
+  const picked = pickBody(html)
+  let markdown = toMarkdown(picked.body, picked.wechat)
+  let plainText = toPlainText(markdown)
+
+  // 页面外壳没渲染出正文时，按“已有信息量”从大到小再试三轮。
+  if (plainText.length < 120) {
+    const noscript = firstMatch(html, /<noscript\b[^>]*>([\s\S]*?)<\/noscript>/i)
+    if (noscript && visibleLength(noscript) >= 200) {
+      const candidate = toMarkdown(stripBlocks(noscript), false)
+      const candidateText = toPlainText(candidate)
+      if (candidateText.length > plainText.length + 80) {
+        markdown = candidate
+        plainText = candidateText
+      }
+    }
+  }
+
+  if (plainText.length < 120 && embedded.body) {
+    const candidate = embedded.body.includes('<') ? toMarkdown(embedded.body, false) : toMarkdown(embedded.body.replace(/&/g, '&amp;').replace(/</g, '&lt;'), false)
+    const candidateText = toPlainText(candidate)
+    if (candidateText.length > plainText.length) {
+      markdown = candidate
+      plainText = candidateText
+    }
+  }
+
+  // 只有摘要可拿时也存下来，至少让这条收藏能被搜到、能看懂大概。
+  if (plainText.length < 80 && description && description.length >= 60) {
+    markdown = description
+    plainText = description
+  }
 
   return {
     url,
@@ -155,6 +406,9 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
     language: language ? language.slice(0, 16) : null,
     markdown,
     plainText,
+    scriptOnly: looksScriptOnly(html, plainText),
+    blocked: looksBlocked(html, plainText),
+    appOnly: looksAppOnly(url, plainText),
   }
 }
 
@@ -190,6 +444,9 @@ export async function fetchArticle(url: string): Promise<ExtractedArticle> {
       language: null,
       markdown: text,
       plainText: text,
+      scriptOnly: false,
+      blocked: false,
+      appOnly: false,
     }
   }
 

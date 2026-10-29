@@ -10,7 +10,7 @@ import type {
 
 import type { ExtractedArticle } from './article'
 import { getDb } from './db'
-import { newId, normalizeUrl, nowIso, oneLine, parseJsonArray, parseJsonObject } from './util'
+import { newId, normalizeUrl, nowIso, oneLine, parseJsonArray, parseJsonObject, sourceTypeOf } from './util'
 
 interface DocumentRow {
   id: string
@@ -73,30 +73,71 @@ function toDetail(row: DocumentRow): DocumentDetail {
   }
 }
 
-/** 保存一条链接；同一条链接（规范化后）已存在时返回已有条目。 */
-export async function createDocument(rawUrl: string): Promise<{ id: string; duplicate: boolean }> {
+/**
+ * 保存一条链接；同一条链接（规范化后）已存在时返回已有条目。
+ * titleHint 来自分享文字或剪贴板：抓不到正文时至少保留用户当时看到的标题。
+ */
+export async function createDocument(
+  rawUrl: string,
+  titleHint?: string | null,
+): Promise<{ id: string; duplicate: boolean }> {
   const url = normalizeUrl(rawUrl)
   if (!url) throw new Error('INVALID_URL')
   const db = await getDb()
+  const hint = titleHint ? oneLine(titleHint, 160) : null
 
-  const existing = await db.getFirstAsync<{ id: string }>(
-    'SELECT id FROM documents WHERE url = ? AND deleted_at IS NULL LIMIT 1',
+  const existing = await db.getFirstAsync<{ id: string; title: string | null }>(
+    'SELECT id, title FROM documents WHERE url = ? AND deleted_at IS NULL LIMIT 1',
     url,
   )
-  if (existing) return { id: existing.id, duplicate: true }
+  if (existing) {
+    if (hint && !existing.title) {
+      await db.runAsync(
+        'UPDATE documents SET title = ?, updated_at = ? WHERE id = ?',
+        hint,
+        nowIso(),
+        existing.id,
+      )
+    }
+    return { id: existing.id, duplicate: true }
+  }
 
   const id = newId()
   const now = nowIso()
   await db.runAsync(
-    `INSERT INTO documents (id, url, canonical_url, source_type, parse_status, parse_stage, saved_at, updated_at)
-     VALUES (?, ?, ?, 'web', 'pending', 'fetch', ?, ?)`,
+    `INSERT INTO documents (id, url, canonical_url, source_type, title, parse_status, parse_stage, saved_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 'pending', 'fetch', ?, ?)`,
     id,
     url,
     url,
+    sourceTypeOf(url),
+    hint,
     now,
     now,
   )
   return { id, duplicate: false }
+}
+
+/** 剪贴板提示用：这条链接是否已经在收藏里（规范化后比较）。 */
+export async function hasDocument(rawUrl: string): Promise<boolean> {
+  const url = normalizeUrl(rawUrl)
+  if (!url) return false
+  const db = await getDb()
+  const row = await db.getFirstAsync<{ id: string }>(
+    'SELECT id FROM documents WHERE url = ? AND deleted_at IS NULL LIMIT 1',
+    url,
+  )
+  return row !== null
+}
+
+/** 抓取失败或没有标题时，沿用保存时的标题种子。 */
+export async function getSeededTitle(id: string): Promise<string | null> {
+  const db = await getDb()
+  const row = await db.getFirstAsync<{ title: string | null }>(
+    'SELECT title FROM documents WHERE id = ? AND deleted_at IS NULL',
+    id,
+  )
+  return row?.title ?? null
 }
 
 export async function listDocuments(options: {
@@ -242,11 +283,18 @@ export async function savePartial(id: string, article: ExtractedArticle): Promis
   const db = await getDb()
   const now = nowIso()
   const summary = article.description ?? null
+  const errorCode = article.blocked
+    ? 'FETCH_BLOCKED'
+    : article.appOnly
+      ? 'APP_ONLY_LINK'
+      : article.scriptOnly
+        ? 'CONTENT_SCRIPT_ONLY'
+        : 'PARSE_INCOMPLETE'
   await db.runAsync(
     `UPDATE documents SET
-       title = ?, site_name = ?, author = ?, description = ?, language = ?,
+       title = COALESCE(?, title), site_name = ?, author = ?, description = ?, language = ?,
        summary_short = ?, plain_text = ?, content_markdown = ?, search_text = ?,
-       parse_status = 'partial', parse_stage = NULL, parse_error_code = 'PARSE_INCOMPLETE',
+       parse_status = 'partial', parse_stage = NULL, parse_error_code = ?,
        last_parsed_at = ?, updated_at = ?
      WHERE id = ?`,
     article.title,
@@ -264,6 +312,7 @@ export async function savePartial(id: string, article: ExtractedArticle): Promis
       keywords: [],
       plainText: article.plainText,
     }),
+    errorCode,
     now,
     now,
     id,
