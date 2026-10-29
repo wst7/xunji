@@ -7,15 +7,9 @@ name: Android APK
 # 这里签的是 RN/Expo 模板自带的 debug 密钥，够个人安装使用；要上 Google Play
 # 或用 EAS 正式签名，请走 apps/mobile 的 EAS 流程，不要用这份产物。
 
+# 只在发版标签和手动触发时构建：日常提交不打包，避免每次改动都跑十几分钟。
 on:
   push:
-    branches: [main]
-    paths:
-      - 'apps/mobile/**'
-      - 'packages/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/android.yml'
     tags: ['v*']
   workflow_dispatch:
 
