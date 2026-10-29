@@ -276,17 +276,12 @@ export function HomeScreen() {
 
             <View style={styles.actions}>
               <AskCard
-                style={styles.askCard}
                 value={query}
                 onChangeText={setQuery}
                 onSubmit={() => void runSearch(query)}
                 loading={searching}
               />
-              <SaveField
-                style={styles.saveCard}
-                onSave={handleSave}
-                onFocus={revealSaveField}
-              />
+              <SaveField onSave={handleSave} onFocus={revealSaveField} />
             </View>
           </ScrollView>
         )}
@@ -362,18 +357,8 @@ const useStyles = makeStyles((theme) => ({
     color: theme.colors.textMuted,
   },
   actions: {
-    flex: 1,
-    minHeight: 0,
     marginTop: theme.spacing.xl,
     gap: theme.spacing.md,
-  },
-  askCard: {
-    flex: 1.12,
-    minHeight: 170,
-  },
-  saveCard: {
-    flex: 0.88,
-    minHeight: 170,
   },
   searchhead: {
     marginTop: theme.spacing.lg,

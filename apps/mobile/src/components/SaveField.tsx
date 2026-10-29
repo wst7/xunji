@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons'
 import { useState } from 'react'
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
-import type { StyleProp, ViewStyle } from 'react-native'
 import { extractHttpUrl, isValidHttpUrl } from '@xunji/shared'
 
 import { titleHintFrom } from '../local/util'
@@ -11,7 +10,6 @@ interface SaveFieldProps {
   onSave: (url: string, titleHint: string | null) => Promise<boolean>
   onFocus?: () => void
   disabled?: boolean
-  style?: StyleProp<ViewStyle>
 }
 
 /** 只输入了域名（没有协议）时补上 https://，避免用户被“没有链接”挡住。 */
@@ -26,7 +24,7 @@ function withScheme(text: string): string | null {
  * 首页的「收藏」面：filled card + 单行 filled field，
  * 识别成功才点亮保存按钮；分享进来的整段文字也能直接放进来。
  */
-export function SaveField({ onSave, onFocus, disabled = false, style }: SaveFieldProps) {
+export function SaveField({ onSave, onFocus, disabled = false }: SaveFieldProps) {
   const theme = useTheme()
   const styles = useStyles()
   const [value, setValue] = useState('')
@@ -63,7 +61,7 @@ export function SaveField({ onSave, onFocus, disabled = false, style }: SaveFiel
   }
 
   return (
-    <View style={[styles.card, style]}>
+    <View style={styles.card}>
       <View style={styles.head}>
         <View style={styles.softicon}>
           <Ionicons name="add" size={20} color={theme.colors.onPrimaryContainer} />
@@ -173,14 +171,14 @@ const useStyles = makeStyles((theme) => ({
     color: theme.colors.textMuted,
   },
   field: {
-    flex: 1,
     minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
     paddingLeft: theme.spacing.md,
     paddingRight: theme.spacing.xs,
-    borderRadius: theme.shape.sm,
+    borderTopLeftRadius: theme.shape.sm,
+    borderTopRightRadius: theme.shape.sm,
     backgroundColor: theme.colors.field,
     overflow: 'hidden',
   },

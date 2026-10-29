@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons'
 import { useState } from 'react'
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
-import type { StyleProp, ViewStyle } from 'react-native'
 
 import { makeStyles, useTheme } from '../theme'
 
@@ -10,21 +9,20 @@ interface AskCardProps {
   onChangeText: (text: string) => void
   onSubmit: () => void
   loading?: boolean
-  style?: StyleProp<ViewStyle>
 }
 
 /**
  * 首页的「提问」面：MD3 elevated card + filled text field，
  * 提交按钮只输入内容后点亮，避免空查询发出无意义的请求。
  */
-export function AskCard({ value, onChangeText, onSubmit, loading = false, style }: AskCardProps) {
+export function AskCard({ value, onChangeText, onSubmit, loading = false }: AskCardProps) {
   const theme = useTheme()
   const styles = useStyles()
   const [focused, setFocused] = useState(false)
   const ready = value.trim().length > 0 && !loading
 
   return (
-    <View style={[styles.card, style]}>
+    <View style={styles.card}>
       <View style={styles.head}>
         <View style={styles.softicon}>
           <Ionicons name="sparkles" size={20} color={theme.colors.onSecondaryContainer} />
@@ -117,8 +115,7 @@ const useStyles = makeStyles((theme) => ({
     color: theme.colors.textMuted,
   },
   field: {
-    flex: 1,
-    minHeight: 88,
+    minHeight: 112,
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: theme.spacing.sm,
