@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons'
 import { useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native'
+import { ActivityIndicator, Pressable, TextInput, View } from 'react-native'
 
-import { colors, radius, shadow, spacing, type } from '../theme'
+import { IconButton } from './ui/IconButton'
+import { makeStyles, useTheme } from '../theme'
 
 interface SearchFieldProps {
   value: string
@@ -13,8 +14,8 @@ interface SearchFieldProps {
 }
 
 /**
- * 搜索结果页的搜索条：聚焦时整圈靛蓝 + 柔和外圈，
- * 输入框里直接给一个清空按钮，回车或右箭头发起检索。
+ * MD3 search bar：surfaceContainerHigh、完整圆角、56 高，
+ * 聚焦时描一圈 primary，尾部是 40dp 的填充式提交按钮。
  */
 export function SearchField({
   value,
@@ -23,6 +24,8 @@ export function SearchField({
   loading = false,
   autoFocus = false,
 }: SearchFieldProps) {
+  const theme = useTheme()
+  const styles = useStyles()
   const [focused, setFocused] = useState(false)
   const query = value.trim()
   const ready = query.length > 0 && !loading
@@ -32,7 +35,7 @@ export function SearchField({
       <Ionicons
         name="search-outline"
         size={20}
-        color={focused ? colors.accent : colors.faint}
+        color={focused ? theme.colors.primary : theme.colors.textMuted}
       />
       <TextInput
         value={value}
@@ -40,9 +43,10 @@ export function SearchField({
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         placeholder="描述你记得的内容"
-        placeholderTextColor={colors.faint}
+        placeholderTextColor={theme.colors.outline}
         style={styles.input}
-        selectionColor={colors.accent}
+        selectionColor={theme.colors.primary}
+        cursorColor={theme.colors.primary}
         returnKeyType="search"
         onSubmitEditing={onSubmit}
         autoFocus={autoFocus}
@@ -50,15 +54,12 @@ export function SearchField({
         editable={!loading}
       />
       {value.length > 0 && (
-        <Pressable
+        <IconButton
+          name="close"
           onPress={() => onChangeText('')}
-          accessibilityRole="button"
           accessibilityLabel="清空输入"
-          hitSlop={8}
-          style={({ pressed }) => [styles.clear, pressed && styles.pressed]}
-        >
-          <Ionicons name="close-circle" size={18} color={colors.faint} />
-        </Pressable>
+          iconSize={18}
+        />
       )}
       <Pressable
         onPress={onSubmit}
@@ -66,74 +67,66 @@ export function SearchField({
         accessibilityRole="button"
         accessibilityLabel={loading ? '查找中' : '找回'}
         accessibilityState={{ disabled: !ready, busy: loading }}
-        style={({ pressed }) => [
-          styles.submit,
-          !ready && styles.submitDisabled,
-          pressed && styles.pressed,
-        ]}
+        style={({ pressed }) => [styles.submitHit, pressed && styles.pressed]}
       >
-        {loading ? (
-          <ActivityIndicator size="small" color={colors.surface} />
-        ) : (
-          <Ionicons
-            name="arrow-forward"
-            size={20}
-            color={ready ? colors.surface : colors.faint}
-          />
-        )}
+        <View style={[styles.submit, !ready && styles.submitDisabled]}>
+          {loading ? (
+            <ActivityIndicator size="small" color={theme.colors.onPrimary} />
+          ) : (
+            <Ionicons
+              name="arrow-forward"
+              size={20}
+              color={ready ? theme.colors.onPrimary : theme.colors.textMuted}
+            />
+          )}
+        </View>
       </Pressable>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   box: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md - 2,
+    gap: theme.spacing.md,
     minHeight: 56,
-    borderRadius: radius.pill,
+    borderRadius: theme.shape.full,
     borderWidth: 1.5,
     borderColor: 'transparent',
-    backgroundColor: colors.surface,
-    paddingLeft: spacing.lg,
-    paddingRight: 6,
-    ...shadow.card,
+    backgroundColor: theme.colors.surfaceContainerHigh,
+    paddingLeft: theme.spacing.lg,
+    paddingRight: theme.spacing.xs,
   },
   boxFocused: {
-    borderColor: colors.accent,
-    ...shadow.accent,
-    shadowOpacity: 0.18,
+    borderColor: theme.colors.primary,
   },
   input: {
-    ...type.body,
+    ...theme.type.bodyLarge,
     flex: 1,
     minHeight: 44,
-    color: colors.ink,
-    paddingVertical: spacing.sm,
+    color: theme.colors.text,
+    paddingVertical: theme.spacing.sm,
     paddingHorizontal: 0,
   },
-  clear: {
-    width: 28,
-    height: 28,
+  submitHit: {
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
   submit: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.accent,
+    width: 40,
+    height: 40,
+    borderRadius: theme.shape.full,
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadow.accent,
   },
   submitDisabled: {
-    backgroundColor: colors.lineStrong,
-    shadowOpacity: 0,
-    elevation: 0,
+    backgroundColor: theme.colors.field,
   },
   pressed: {
     opacity: 0.75,
   },
-})
+}))

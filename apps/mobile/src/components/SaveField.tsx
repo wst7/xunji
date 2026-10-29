@@ -1,18 +1,11 @@
 import { Ionicons } from '@expo/vector-icons'
 import { useState } from 'react'
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native'
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
 import type { StyleProp, ViewStyle } from 'react-native'
 import { extractHttpUrl, isValidHttpUrl } from '@xunji/shared'
 
 import { titleHintFrom } from '../local/util'
-import { colors, radius, shadow, spacing, type } from '../theme'
+import { makeStyles, useTheme } from '../theme'
 
 interface SaveFieldProps {
   onSave: (url: string, titleHint: string | null) => Promise<boolean>
@@ -30,10 +23,12 @@ function withScheme(text: string): string | null {
 }
 
 /**
- * 首页的「收藏」面：粘贴链接后立刻识别出 URL，
+ * 首页的「收藏」面：filled card + 单行 filled field，
  * 识别成功才点亮保存按钮；分享进来的整段文字也能直接放进来。
  */
 export function SaveField({ onSave, onFocus, disabled = false, style }: SaveFieldProps) {
+  const theme = useTheme()
+  const styles = useStyles()
   const [value, setValue] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -71,7 +66,7 @@ export function SaveField({ onSave, onFocus, disabled = false, style }: SaveFiel
     <View style={[styles.card, style]}>
       <View style={styles.head}>
         <View style={styles.softicon}>
-          <Ionicons name="add" size={20} color={colors.accent} />
+          <Ionicons name="add" size={20} color={theme.colors.onPrimaryContainer} />
         </View>
         <View style={styles.headText}>
           <Text style={styles.label}>收藏</Text>
@@ -79,7 +74,7 @@ export function SaveField({ onSave, onFocus, disabled = false, style }: SaveFiel
         </View>
       </View>
 
-      <View style={[styles.field, focused && styles.fieldFocused]}>
+      <View style={styles.field}>
         <TextInput
           value={value}
           onChangeText={(text) => {
@@ -92,10 +87,11 @@ export function SaveField({ onSave, onFocus, disabled = false, style }: SaveFiel
           }}
           onBlur={() => setFocused(false)}
           placeholder="https://mp.weixin.qq.com/s/…"
-          placeholderTextColor={colors.faint}
+          placeholderTextColor={theme.colors.outline}
           maxLength={4000}
           style={styles.input}
-          selectionColor={colors.accent}
+          selectionColor={theme.colors.primary}
+          cursorColor={theme.colors.primary}
           returnKeyType="done"
           onSubmitEditing={() => void submit()}
           accessibilityLabel="粘贴要保存的链接或分享文字"
@@ -107,34 +103,33 @@ export function SaveField({ onSave, onFocus, disabled = false, style }: SaveFiel
           accessibilityRole="button"
           accessibilityLabel={busy ? '保存中' : '保存链接'}
           accessibilityState={{ disabled: !ready, busy }}
-          style={({ pressed }) => [
-            styles.round,
-            !ready && styles.roundDisabled,
-            pressed && styles.pressed,
-          ]}
+          style={({ pressed }) => [styles.submitHit, pressed && styles.pressed]}
         >
-          {busy ? (
-            <ActivityIndicator size="small" color={colors.surface} />
-          ) : (
-            <Ionicons
-              name="arrow-up"
-              size={20}
-              color={ready ? colors.surface : colors.faint}
-            />
-          )}
+          <View style={[styles.submit, !ready && styles.submitDisabled]}>
+            {busy ? (
+              <ActivityIndicator size="small" color={theme.colors.onPrimary} />
+            ) : (
+              <Ionicons
+                name="arrow-up"
+                size={20}
+                color={ready ? theme.colors.onPrimary : theme.colors.textMuted}
+              />
+            )}
+          </View>
         </Pressable>
+        <View style={[styles.indicator, focused && styles.indicatorFocused]} />
       </View>
 
       {error ? (
         <View style={styles.hintRow}>
-          <Ionicons name="alert-circle-outline" size={13} color={colors.error} />
+          <Ionicons name="alert-circle-outline" size={14} color={theme.colors.error} />
           <Text style={[styles.hint, styles.error]} numberOfLines={1}>
             {error}
           </Text>
         </View>
       ) : extraText && detectedUrl ? (
         <View style={styles.hintRow}>
-          <Ionicons name="link-outline" size={13} color={colors.muted} />
+          <Ionicons name="link-outline" size={14} color={theme.colors.textMuted} />
           <Text style={styles.hint} numberOfLines={1}>
             {detectedUrl}
           </Text>
@@ -144,26 +139,24 @@ export function SaveField({ onSave, onFocus, disabled = false, style }: SaveFiel
   )
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   card: {
-    padding: spacing.lg + 4,
-    borderRadius: radius.card + 4,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.lineSoft,
-    gap: spacing.md + 2,
-    ...shadow.card,
+    padding: theme.spacing.lg + 2,
+    borderRadius: theme.shape.lgIncreased,
+    backgroundColor: theme.colors.card,
+    gap: theme.spacing.md,
+    ...theme.elevation.level1,
   },
   head: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: theme.spacing.md,
   },
   softicon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: colors.accentSoft,
+    width: 40,
+    height: 40,
+    borderRadius: theme.shape.full,
+    backgroundColor: theme.colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -171,51 +164,60 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   label: {
-    ...type.title,
-    color: colors.ink,
+    ...theme.type.titleMedium,
+    color: theme.colors.text,
   },
   sub: {
-    ...type.caption,
+    ...theme.type.bodySmall,
     marginTop: 1,
-    color: colors.faint,
+    color: theme.colors.textMuted,
   },
   field: {
     flex: 1,
-    minHeight: 76,
+    minHeight: 56,
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: spacing.sm,
-    padding: spacing.md + 2,
-    borderRadius: radius.control + 4,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    backgroundColor: colors.surfaceMuted,
-  },
-  fieldFocused: {
-    borderColor: colors.accent,
-    backgroundColor: colors.surface,
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    paddingLeft: theme.spacing.md,
+    paddingRight: theme.spacing.xs,
+    borderRadius: theme.shape.sm,
+    backgroundColor: theme.colors.field,
+    overflow: 'hidden',
   },
   input: {
     flex: 1,
     height: 44,
-    fontSize: 14.5,
-    lineHeight: 22,
-    color: colors.ink,
+    ...theme.type.bodyLarge,
+    color: theme.colors.text,
     paddingVertical: 0,
   },
-  round: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.accent,
+  submitHit: {
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadow.accent,
   },
-  roundDisabled: {
-    backgroundColor: colors.lineStrong,
-    shadowOpacity: 0,
-    elevation: 0,
+  submit: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.shape.full,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitDisabled: {
+    backgroundColor: theme.colors.surfaceContainerHighest,
+  },
+  indicator: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 2,
+    backgroundColor: 'transparent',
+  },
+  indicatorFocused: {
+    backgroundColor: theme.colors.primary,
   },
   pressed: {
     opacity: 0.75,
@@ -224,16 +226,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    marginTop: -spacing.xs,
+    marginTop: -theme.spacing.xs,
   },
   hint: {
-    ...type.caption,
+    ...theme.type.bodySmall,
     flex: 1,
-    fontSize: 11.5,
-    lineHeight: 16,
-    color: colors.muted,
+    color: theme.colors.textMuted,
   },
   error: {
-    color: colors.error,
+    color: theme.colors.error,
   },
-})
+}))

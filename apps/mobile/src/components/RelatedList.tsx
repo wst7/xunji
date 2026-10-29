@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons'
 import type { RelatedItem } from '@xunji/shared'
 import { dedupeRelated, domainOf, RELATION_LABELS } from '@xunji/shared'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 
-import { colors, radius, shadow, spacing, type } from '../theme'
+import { makeStyles, useTheme } from '../theme'
 
 export function RelatedList({
   items,
@@ -12,6 +12,8 @@ export function RelatedList({
   items: RelatedItem[]
   onPress: (id: string) => void
 }) {
+  const theme = useTheme()
+  const styles = useStyles()
   // The API can return the same document once per relation type; show each once.
   const unique = dedupeRelated(items)
 
@@ -19,7 +21,7 @@ export function RelatedList({
   return (
     <View style={styles.wrap}>
       <View style={styles.headingRow}>
-        <Ionicons name="git-network-outline" size={15} color={colors.muted} />
+        <Ionicons name="git-network-outline" size={16} color={theme.colors.textMuted} />
         <Text style={styles.heading}>相关收藏</Text>
       </View>
       <View style={styles.card}>
@@ -43,7 +45,7 @@ export function RelatedList({
                 {RELATION_LABELS[item.relation_type] ?? item.relation_type} · {domainOf(item.url)}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.faint} />
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.outline} />
           </Pressable>
         ))}
       </View>
@@ -51,54 +53,53 @@ export function RelatedList({
   )
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   wrap: {
-    marginTop: spacing.xl,
-    gap: spacing.sm,
+    marginTop: theme.spacing.xl,
+    gap: theme.spacing.sm,
   },
   headingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    marginLeft: spacing.xs,
+    gap: theme.spacing.xs,
+    marginLeft: theme.spacing.xs,
   },
   heading: {
-    ...type.caption,
-    color: colors.muted,
+    ...theme.type.labelMedium,
     fontWeight: '600',
+    color: theme.colors.textMuted,
   },
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
+    backgroundColor: theme.colors.surfaceContainerHigh,
+    borderRadius: theme.shape.lg,
     overflow: 'hidden',
-    ...shadow.card,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    minHeight: 56,
+    gap: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    minHeight: 64,
   },
   divider: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.line,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.divider,
   },
   pressed: {
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: theme.colors.surfaceContainerHighest,
   },
   body: {
     flex: 1,
     gap: 2,
   },
   title: {
-    ...type.body,
-    fontWeight: '600',
-    color: colors.ink,
+    ...theme.type.bodyLarge,
+    fontWeight: '500',
+    color: theme.colors.text,
   },
   meta: {
-    ...type.caption,
-    color: colors.faint,
+    ...theme.type.bodySmall,
+    color: theme.colors.textMuted,
   },
-})
+}))

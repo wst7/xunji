@@ -5,7 +5,6 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
-  StyleSheet,
   Text,
   TextInput,
   View,
@@ -25,16 +24,16 @@ import {
 import { AppTabBar } from '../components/AppTabBar'
 import { LiveStatusBadge } from '../components/LiveStatusBadge'
 import { EmptyState } from '../components/ui/EmptyState'
+import { IconButton } from '../components/ui/IconButton'
 import { Notice } from '../components/ui/Notice'
 import { Screen } from '../components/ui/Screen'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import * as repo from '../local/repo'
 import { useToast } from '../providers/ToastProvider'
-import { colors, layout, radius, shadow, spacing, tintFor, type } from '../theme'
+import { makeStyles, useTheme, withAlpha } from '../theme'
 
 const PAGE_SIZE = 20
 const APP_NAME = '寻迹'
-const GUTTER = 20
 
 interface DocumentRowProps {
   doc: DocumentSummary
@@ -42,17 +41,19 @@ interface DocumentRowProps {
   onTerminal: (status: ParseStatus) => void
 }
 
-/** 列表行，而不是一张张卡片：整屏只浮起一张白色面板。 */
+/** MD3 两行列表项：头像、标题与元信息，右侧状态与箭头。 */
 function DocumentRow({ doc, onPress, onTerminal }: DocumentRowProps) {
+  const theme = useTheme()
+  const styles = useStyles()
   const seed = (doc.site_name && doc.site_name.trim()) || domainOf(doc.url).replace(/^www\./i, '')
-  const tint = tintFor(seed || '拾')
+  const tint = theme.tintFor(seed || '拾')
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={doc.title || doc.url}
-      android_ripple={{ color: colors.surfaceMuted }}
+      android_ripple={{ color: withAlpha(theme.colors.onSurface, 0.08) }}
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
       <View style={[styles.avatar, { backgroundColor: tint.bg }]}>
@@ -70,7 +71,7 @@ function DocumentRow({ doc, onPress, onTerminal }: DocumentRowProps) {
         </Text>
       </View>
       <LiveStatusBadge docId={doc.id} status={doc.parse_status} onTerminal={onTerminal} />
-      <Ionicons name="chevron-forward" size={16} color={colors.lineStrong} />
+      <Ionicons name="chevron-forward" size={18} color={theme.colors.outline} />
     </Pressable>
   )
 }
@@ -79,6 +80,8 @@ export function DocumentsScreen() {
   const router = useRouter()
   const { toast } = useToast()
   const insets = useSafeAreaInsets()
+  const theme = useTheme()
+  const styles = useStyles()
 
   const [keywordInput, setKeywordInput] = useState('')
   const [items, setItems] = useState<DocumentSummary[]>([])
@@ -92,7 +95,7 @@ export function DocumentsScreen() {
 
   const keyword = useDebouncedValue(keywordInput.trim(), 300)
   const requestSeq = useRef(0)
-  const bottomPad = Math.max(insets.bottom, spacing.sm) + layout.tabBarSpace
+  const bottomPad = insets.bottom + theme.layout.navBarHeight + theme.spacing.lg
 
   const load = useCallback(
     async (nextPage: number, mode: 'replace' | 'append') => {
@@ -178,8 +181,9 @@ export function DocumentsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={colors.accent}
-            colors={[colors.accent]}
+            tintColor={theme.colors.primary}
+            colors={[theme.colors.primary]}
+            progressBackgroundColor={theme.colors.surfaceContainerHigh}
           />
         }
         ListHeaderComponent={
@@ -195,11 +199,11 @@ export function DocumentsScreen() {
                     : '你的所有链接'}
             </Text>
 
-            <View style={[styles.filterBox, filterFocused && styles.filterBoxFocused]}>
+            <View style={[styles.searchBar, filterFocused && styles.searchBarFocused]}>
               <Ionicons
                 name="search-outline"
-                size={18}
-                color={filterFocused ? colors.accent : colors.faint}
+                size={20}
+                color={filterFocused ? theme.colors.primary : theme.colors.textMuted}
               />
               <TextInput
                 value={keywordInput}
@@ -207,24 +211,22 @@ export function DocumentsScreen() {
                 onFocus={() => setFilterFocused(true)}
                 onBlur={() => setFilterFocused(false)}
                 placeholder="筛选收藏……"
-                placeholderTextColor={colors.faint}
-                style={styles.filterInput}
-                selectionColor={colors.accent}
+                placeholderTextColor={theme.colors.outline}
+                style={styles.searchInput}
+                selectionColor={theme.colors.primary}
+                cursorColor={theme.colors.primary}
                 returnKeyType="search"
                 autoCapitalize="none"
                 autoCorrect={false}
                 accessibilityLabel="按关键词筛选"
               />
-              {keywordInput || keyword ? (
-                <Pressable
+              {keywordInput ? (
+                <IconButton
+                  name="close"
                   onPress={() => setKeywordInput('')}
-                  accessibilityRole="button"
                   accessibilityLabel="清除筛选"
-                  hitSlop={8}
-                  style={({ pressed }) => [styles.clearButton, pressed && styles.pressed]}
-                >
-                  <Ionicons name="close-circle" size={18} color={colors.faint} />
-                </Pressable>
+                  iconSize={18}
+                />
               ) : null}
             </View>
 
@@ -236,25 +238,19 @@ export function DocumentsScreen() {
           </View>
         }
         renderItem={({ item, index }) => (
-          <View
-            style={[
-              styles.rowWrap,
-              index === 0 && styles.rowFirst,
-              index === items.length - 1 && styles.rowLast,
-            ]}
-          >
+          <View>
             <DocumentRow
               doc={item}
               onPress={() => router.push(`/documents/${item.id}`)}
               onTerminal={handleTerminal}
             />
+            {index < items.length - 1 ? <RowDivider /> : null}
           </View>
         )}
-        ItemSeparatorComponent={RowDivider}
         ListEmptyComponent={
           loading ? (
             <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color={colors.faint} />
+              <ActivityIndicator size="small" color={theme.colors.primary} />
               <Text style={styles.loadingText}>正在加载……</Text>
             </View>
           ) : error ? undefined : (
@@ -280,7 +276,7 @@ export function DocumentsScreen() {
           hasMore ? (
             <View style={styles.footer}>
               {loadingMore ? (
-                <ActivityIndicator size="small" color={colors.faint} />
+                <ActivityIndicator size="small" color={theme.colors.primary} />
               ) : (
                 <Pressable
                   onPress={() => {
@@ -306,6 +302,7 @@ export function DocumentsScreen() {
 }
 
 function RowDivider() {
+  const styles = useStyles()
   return (
     <View style={styles.dividerWrap}>
       <View style={styles.dividerLine} />
@@ -313,97 +310,69 @@ function RowDivider() {
   )
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   listContent: {
     flexGrow: 1,
-    paddingHorizontal: GUTTER,
-    paddingTop: spacing.sm,
+    paddingHorizontal: theme.layout.gutter,
   },
   header: {
-    paddingBottom: spacing.lg,
+    paddingBottom: theme.spacing.sm,
   },
   screenTitle: {
-    marginTop: spacing.sm,
-    ...type.display,
-    color: colors.ink,
+    ...theme.type.headlineMedium,
+    marginTop: theme.spacing.sm,
+    color: theme.colors.text,
   },
   screenSub: {
-    ...type.caption,
-    marginTop: 3,
-    color: colors.faint,
+    ...theme.type.bodyMedium,
+    marginTop: theme.spacing.xs,
+    color: theme.colors.textMuted,
   },
-  filterBox: {
-    marginTop: 14,
+  searchBar: {
+    marginTop: theme.spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
+    gap: theme.spacing.md,
+    borderRadius: theme.shape.full,
+    borderWidth: 1,
     borderColor: 'transparent',
-    backgroundColor: colors.surface,
-    paddingLeft: spacing.lg,
-    paddingRight: spacing.sm,
-    minHeight: 52,
-    ...shadow.card,
+    backgroundColor: theme.colors.surfaceContainerHigh,
+    paddingLeft: theme.spacing.lg,
+    paddingRight: theme.spacing.xs,
+    minHeight: 56,
   },
-  filterBoxFocused: {
-    borderColor: colors.accent,
+  searchBarFocused: {
+    borderColor: theme.colors.primary,
   },
-  filterInput: {
-    ...type.body,
+  searchInput: {
+    ...theme.type.bodyLarge,
     flex: 1,
-    color: colors.ink,
-    paddingVertical: spacing.sm,
+    color: theme.colors.text,
+    paddingVertical: theme.spacing.sm,
     paddingHorizontal: 0,
   },
-  clearButton: {
-    width: 32,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   notice: {
-    marginTop: spacing.md,
-  },
-  rowWrap: {
-    backgroundColor: colors.surface,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: colors.lineSoft,
-    overflow: 'hidden',
-  },
-  rowFirst: {
-    borderTopWidth: 1,
-    borderTopLeftRadius: radius.card,
-    borderTopRightRadius: radius.card,
-  },
-  rowLast: {
-    borderBottomWidth: 1,
-    borderBottomLeftRadius: radius.card,
-    borderBottomRightRadius: radius.card,
+    marginTop: theme.spacing.md,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: 14,
-    paddingLeft: spacing.lg,
-    paddingRight: 14,
+    gap: theme.spacing.md,
+    minHeight: 72,
+    paddingVertical: theme.spacing.md,
   },
   rowPressed: {
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: theme.colors.cardMuted,
   },
   avatar: {
     width: 40,
     height: 40,
-    borderRadius: 13,
+    borderRadius: theme.shape.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: '700',
+    ...theme.type.titleMedium,
   },
   rowBody: {
     flex: 1,
@@ -411,58 +380,51 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   rowTitle: {
-    fontSize: 14.5,
-    lineHeight: 21,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-    color: colors.ink,
+    ...theme.type.bodyLarge,
+    fontWeight: '500',
+    color: theme.colors.text,
   },
   rowMeta: {
-    fontSize: 11.5,
-    lineHeight: 16,
-    color: colors.faint,
+    ...theme.type.bodySmall,
+    color: theme.colors.textMuted,
   },
   dividerWrap: {
     height: 1,
-    backgroundColor: colors.surface,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: colors.lineSoft,
     paddingLeft: 68,
-    paddingRight: spacing.lg,
+    paddingRight: theme.spacing.lg,
   },
   dividerLine: {
     flex: 1,
-    backgroundColor: colors.lineSoft,
+    backgroundColor: theme.colors.divider,
   },
   loadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xl,
+    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.xl,
   },
   loadingText: {
-    ...type.caption,
-    color: colors.faint,
+    ...theme.type.bodySmall,
+    color: theme.colors.textMuted,
   },
   emptyWrap: {
-    paddingTop: spacing.xl,
+    paddingTop: theme.spacing.xl,
   },
   footer: {
-    paddingVertical: spacing.xl,
+    paddingVertical: theme.spacing.xl,
     alignItems: 'center',
   },
   loadMoreButton: {
-    minHeight: 44,
+    minHeight: 48,
     justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: theme.spacing.xl,
   },
   loadMore: {
-    ...type.caption,
-    color: colors.accent,
+    ...theme.type.labelLarge,
+    color: theme.colors.primary,
     fontWeight: '600',
   },
   pressed: {
     opacity: 0.55,
   },
-})
+}))

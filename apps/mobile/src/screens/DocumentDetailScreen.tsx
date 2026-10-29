@@ -1,14 +1,6 @@
 import { Ionicons } from '@expo/vector-icons'
 import { useCallback, useEffect, useState } from 'react'
-import {
-  ActivityIndicator,
-  Linking,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native'
+import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentDetail, ParseStatus, RelatedItem } from '@xunji/shared'
@@ -25,48 +17,14 @@ import { Markdown } from '../components/Markdown'
 import { RelatedList } from '../components/RelatedList'
 import { Button } from '../components/ui/Button'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
+import { IconButton } from '../components/ui/IconButton'
 import { Notice } from '../components/ui/Notice'
 import { Screen } from '../components/ui/Screen'
+import { TopAppBar } from '../components/ui/TopAppBar'
 import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
 import { useToast } from '../providers/ToastProvider'
-import { colors, radius, shadow, spacing, type } from '../theme'
-
-function DetailTopBar({
-  onBack,
-  onDelete,
-}: {
-  onBack: () => void
-  onDelete?: () => void
-}) {
-  return (
-    <View style={styles.topbar}>
-      <Pressable
-        onPress={onBack}
-        accessibilityRole="button"
-        accessibilityLabel="返回"
-        hitSlop={8}
-        style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
-      >
-        <Ionicons name="chevron-back" size={21} color={colors.ink} />
-      </Pressable>
-      <Text style={styles.topbarTitle}>收藏详情</Text>
-      {onDelete ? (
-        <Pressable
-          onPress={onDelete}
-          accessibilityRole="button"
-          accessibilityLabel="删除这篇收藏"
-          hitSlop={8}
-          style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
-        >
-          <Ionicons name="trash-outline" size={19} color={colors.error} />
-        </Pressable>
-      ) : (
-        <View style={styles.iconPlaceholder} />
-      )}
-    </View>
-  )
-}
+import { makeStyles, useTheme, withAlpha } from '../theme'
 
 export function DocumentDetailScreen() {
   const router = useRouter()
@@ -74,6 +32,8 @@ export function DocumentDetailScreen() {
   const id = Array.isArray(params.id) ? params.id[0] : params.id
   const { toast } = useToast()
   const insets = useSafeAreaInsets()
+  const theme = useTheme()
+  const styles = useStyles()
 
   const [doc, setDoc] = useState<DocumentDetail | null>(null)
   const [related, setRelated] = useState<RelatedItem[]>([])
@@ -155,10 +115,29 @@ export function DocumentDetailScreen() {
     }
   }
 
+  const topBar = (
+    <TopAppBar
+      title="收藏详情"
+      centerTitle
+      onBack={goBack}
+      actions={
+        doc ? (
+          <IconButton
+            name="trash-outline"
+            onPress={confirmDelete}
+            accessibilityLabel="删除这篇收藏"
+            color={theme.colors.error}
+            disabled={deleting}
+          />
+        ) : null
+      }
+    />
+  )
+
   if (error) {
     return (
       <Screen>
-        <DetailTopBar onBack={goBack} />
+        {topBar}
         <View style={styles.stateWrap}>
           <Notice text={error} tone="error" />
           <Button label="重试" onPress={() => void load()} variant="secondary" />
@@ -170,9 +149,9 @@ export function DocumentDetailScreen() {
   if (!doc || status === null) {
     return (
       <Screen>
-        <DetailTopBar onBack={goBack} />
+        {topBar}
         <View style={styles.stateWrap}>
-          <ActivityIndicator color={colors.accent} />
+          <ActivityIndicator color={theme.colors.primary} />
           <Text style={styles.loadingText}>正在加载……</Text>
         </View>
       </Screen>
@@ -181,22 +160,31 @@ export function DocumentDetailScreen() {
 
   const bodySource = doc.content_markdown ?? doc.plain_text ?? ''
   const canReprocess = status === 'partial' || status === 'failed'
-  const actionBarPad = Math.max(insets.bottom, spacing.md)
+  const fabBottom = insets.bottom + theme.spacing.md
 
   return (
     <Screen>
-      <DetailTopBar onBack={goBack} onDelete={confirmDelete} />
+      {topBar}
 
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: 84 + actionBarPad + spacing.xl },
+          {
+            paddingBottom:
+              insets.bottom + theme.layout.fabHeight + theme.spacing.md + theme.spacing.xl,
+          },
         ]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.domainChip}>
-          <Ionicons name="globe-outline" size={12} color={colors.accent} />
-          <Text style={styles.domainText}>{domainOf(doc.url)}</Text>
+          <Ionicons
+            name="globe-outline"
+            size={14}
+            color={theme.colors.onSecondaryContainer}
+          />
+          <Text style={styles.domainText} numberOfLines={1}>
+            {domainOf(doc.url)}
+          </Text>
         </View>
 
         <Text style={styles.title}>{doc.title || doc.url}</Text>
@@ -217,15 +205,13 @@ export function DocumentDetailScreen() {
               }}
             />
             {canReprocess && (
-              <Pressable
+              <Button
+                label={reprocessing ? '提交中…' : '重新解析'}
                 onPress={() => void handleReprocess()}
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.textActionButton, pressed && styles.pressed]}
-              >
-                <Text style={[styles.textAction, reprocessing && styles.textActionDisabled]}>
-                  {reprocessing ? '提交中…' : '重新解析'}
-                </Text>
-              </Pressable>
+                variant="ghost"
+                size="small"
+                disabled={reprocessing}
+              />
             )}
           </View>
         )}
@@ -233,7 +219,7 @@ export function DocumentDetailScreen() {
         {(doc.summary_short || doc.summary_long) && (
           <View style={styles.summaryBlock}>
             <View style={styles.blockLabelRow}>
-              <Ionicons name="sparkles" size={14} color={colors.accent} />
+              <Ionicons name="sparkles" size={16} color={theme.colors.onPrimaryContainer} />
               <Text style={styles.label}>摘要</Text>
             </View>
             {doc.summary_short && <Text style={styles.summaryLead}>{doc.summary_short}</Text>}
@@ -275,14 +261,23 @@ export function DocumentDetailScreen() {
         )}
       </ScrollView>
 
-      <View style={[styles.actionBar, { paddingBottom: actionBarPad }]}>
-        <Button
-          label="打开原文"
-          onPress={() => void openOriginal()}
-          icon="open-outline"
-          style={styles.openButton}
-        />
-      </View>
+      <Pressable
+        onPress={() => void openOriginal()}
+        accessibilityRole="button"
+        accessibilityLabel="打开原文"
+        android_ripple={{
+          color: withAlpha(theme.colors.onPrimaryContainer, 0.12),
+          borderless: false,
+        }}
+        style={({ pressed }) => [
+          styles.fab,
+          { bottom: fabBottom },
+          pressed && styles.fabPressed,
+        ]}
+      >
+        <Ionicons name="open-outline" size={20} color={theme.colors.onPrimaryContainer} />
+        <Text style={styles.fabLabel}>打开原文</Text>
+      </Pressable>
 
       <ConfirmDialog
         visible={confirmingDelete}
@@ -300,190 +295,136 @@ export function DocumentDetailScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  topbar: {
-    minHeight: 52,
-    paddingTop: spacing.xs,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.control,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconPlaceholder: {
-    width: 40,
-    height: 40,
-  },
-  topbarTitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-    color: colors.ink,
-  },
+const useStyles = makeStyles((theme) => ({
   content: {
-    paddingHorizontal: 20,
-    paddingTop: spacing.sm,
+    paddingHorizontal: theme.layout.gutter,
+    paddingTop: theme.spacing.xs,
   },
   stateWrap: {
-    padding: spacing.lg,
-    gap: spacing.lg,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.lg,
   },
   loadingText: {
-    ...type.caption,
-    color: colors.faint,
+    ...theme.type.bodyMedium,
+    color: theme.colors.textMuted,
     textAlign: 'center',
   },
   domainChip: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    gap: 4,
-    height: 24,
-    paddingHorizontal: 10,
-    backgroundColor: colors.accentSoft,
-    borderRadius: radius.pill,
-    marginBottom: spacing.md,
+    gap: 6,
+    minHeight: 32,
+    maxWidth: '100%',
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.shape.sm,
+    backgroundColor: theme.colors.secondaryContainer,
+    marginBottom: theme.spacing.md,
   },
   domainText: {
-    fontSize: 11.5,
-    lineHeight: 16,
-    color: colors.accent,
-    fontWeight: '600',
+    ...theme.type.labelMedium,
+    fontWeight: '500',
+    color: theme.colors.onSecondaryContainer,
+    flexShrink: 1,
   },
   title: {
-    fontSize: 24,
-    lineHeight: 32,
-    fontWeight: '700',
-    letterSpacing: -0.7,
-    color: colors.ink,
+    ...theme.type.headlineSmall,
+    color: theme.colors.text,
   },
   meta: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.faint,
-    marginTop: spacing.sm,
+    ...theme.type.bodySmall,
+    color: theme.colors.textMuted,
+    marginTop: theme.spacing.sm,
   },
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    marginTop: spacing.md,
-  },
-  textActionButton: {
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  textAction: {
-    ...type.caption,
-    color: colors.accent,
-    fontWeight: '600',
-  },
-  textActionDisabled: {
-    color: colors.faint,
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.md,
+    marginLeft: -theme.spacing.xs,
   },
   summaryBlock: {
-    marginTop: 18,
-    backgroundColor: colors.accentSoft,
-    borderWidth: 1,
-    borderColor: colors.accentLine,
-    borderRadius: radius.card,
-    padding: spacing.lg,
-    gap: 7,
+    marginTop: theme.spacing.lg,
+    backgroundColor: theme.colors.primaryContainer,
+    borderRadius: theme.shape.lg,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.sm,
   },
   blockLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
   },
   label: {
-    fontSize: 12,
-    lineHeight: 17,
+    ...theme.type.labelMedium,
+    color: theme.colors.onPrimaryContainer,
     fontWeight: '600',
-    color: colors.muted,
   },
   summaryLead: {
-    fontSize: 15.5,
-    lineHeight: 24,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-    color: colors.ink,
+    ...theme.type.titleMedium,
+    color: theme.colors.onPrimaryContainer,
   },
   summaryLong: {
-    fontSize: 13.5,
-    lineHeight: 22,
-    color: colors.inkSoft,
+    ...theme.type.bodyMedium,
+    color: theme.colors.onPrimaryContainer,
   },
   keywordBlock: {
-    marginTop: 18,
+    marginTop: theme.spacing.lg,
   },
   keywordLabel: {
-    fontSize: 12,
-    lineHeight: 17,
+    ...theme.type.labelMedium,
     fontWeight: '600',
-    color: colors.muted,
-    marginBottom: spacing.sm,
+    color: theme.colors.textMuted,
+    marginBottom: theme.spacing.sm,
   },
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: theme.spacing.sm,
   },
   chip: {
-    height: 26,
-    paddingHorizontal: 11,
+    height: 32,
+    paddingHorizontal: theme.spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.pill,
+    borderColor: theme.colors.outlineVariant,
+    borderRadius: theme.shape.sm,
   },
   chipText: {
-    fontSize: 12,
-    lineHeight: 16,
-    color: colors.muted,
+    ...theme.type.labelMedium,
+    color: theme.colors.textMuted,
   },
   body: {
-    marginTop: 18,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.lineSoft,
-    borderRadius: radius.card,
-    padding: spacing.lg,
-    ...shadow.card,
+    marginTop: theme.spacing.lg,
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.shape.lg,
+    padding: theme.spacing.lg,
+    ...theme.elevation.level1,
   },
   emptyBody: {
-    ...type.body,
-    color: colors.muted,
+    ...theme.type.bodyMedium,
+    color: theme.colors.textMuted,
   },
-  actionBar: {
+  fab: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: 20,
-    paddingTop: spacing.md,
-    backgroundColor: colors.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.line,
-    ...shadow.action,
-    shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.08,
+    right: theme.layout.gutter,
+    height: theme.layout.fabHeight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg + 2,
+    borderRadius: theme.shape.lg,
+    backgroundColor: theme.colors.primaryContainer,
+    overflow: 'hidden',
+    ...theme.elevation.level3,
   },
-  openButton: {
-    minHeight: 48,
+  fabPressed: {
+    opacity: 0.9,
   },
-  pressed: {
-    opacity: 0.6,
+  fabLabel: {
+    ...theme.type.labelLarge,
+    fontWeight: '600',
+    color: theme.colors.onPrimaryContainer,
   },
-})
+}))

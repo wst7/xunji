@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons'
 import type { SearchResult } from '@xunji/shared'
 import { domainOf, formatRelativeDate, sourceLabel, SOURCE_TYPE_LABELS } from '@xunji/shared'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 
-import { colors, radius, shadow, spacing, tintFor } from '../theme'
+import { makeStyles, useTheme, withAlpha } from '../theme'
 import { LiveStatusBadge } from './LiveStatusBadge'
 
 /** 有站点名就用站点名首字（“知”“少”），否则退回域名首字母；颜色由来源稳定决定。 */
@@ -21,16 +21,20 @@ interface SearchResultCardProps {
   onTerminal?: (status: SearchResult['parse_status']) => void
 }
 
+/** MD3 elevated card：卡面承载标题与摘要，命中理由单独一块 secondaryContainer。 */
 export function SearchResultCard({ item, onPress, onTerminal }: SearchResultCardProps) {
+  const theme = useTheme()
+  const styles = useStyles()
   const seed = sourceSeed(item.url, item.site_name)
-  const tint = tintFor(seed)
+  const tint = theme.tintFor(seed)
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={item.title || item.url}
-      style={({ pressed }) => [styles.card, styles.stacked, pressed && styles.pressed]}
+      android_ripple={{ color: withAlpha(theme.colors.onSurface, 0.08) }}
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.row}>
         <View style={[styles.avatar, { backgroundColor: tint.bg }]}>
@@ -61,7 +65,7 @@ export function SearchResultCard({ item, onPress, onTerminal }: SearchResultCard
 
       <View style={styles.matchBox}>
         <View style={styles.matchHead}>
-          <Ionicons name="sparkles" size={13} color={colors.accent} />
+          <Ionicons name="sparkles" size={14} color={theme.colors.onSecondaryContainer} />
           <Text style={styles.matchLabel}>为什么找到它</Text>
         </View>
         <Text style={styles.matchText}>{item.match_reason}</Text>
@@ -75,100 +79,83 @@ export function SearchResultCard({ item, onPress, onTerminal }: SearchResultCard
   )
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.lineSoft,
-    padding: spacing.lg,
-    ...shadow.card,
-  },
-  stacked: {
-    padding: spacing.lg,
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.shape.lg,
+    padding: theme.spacing.lg,
+    ...theme.elevation.level1,
   },
   pressed: {
-    opacity: 0.85,
-    backgroundColor: colors.surfaceMuted,
+    backgroundColor: theme.colors.cardMuted,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.md,
+    gap: theme.spacing.md,
   },
   avatar: {
     width: 40,
     height: 40,
-    borderRadius: 13,
+    borderRadius: theme.shape.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 16,
-    lineHeight: 22,
-    fontWeight: '700',
+    ...theme.type.titleMedium,
   },
   body: {
     flex: 1,
     minWidth: 0,
-    gap: 3,
+    gap: 2,
   },
   metaRow: {
-    marginTop: 1,
+    marginTop: 2,
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    columnGap: spacing.sm,
-    rowGap: spacing.xs,
+    columnGap: theme.spacing.sm,
+    rowGap: theme.spacing.xs,
   },
   title: {
-    fontSize: 15,
-    lineHeight: 22,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-    color: colors.ink,
+    ...theme.type.titleMedium,
+    color: theme.colors.text,
   },
   summary: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.muted,
+    ...theme.type.bodyMedium,
+    marginTop: 4,
+    color: theme.colors.textMuted,
   },
   meta: {
-    fontSize: 11.5,
-    lineHeight: 16,
+    ...theme.type.bodySmall,
     flexShrink: 1,
-    color: colors.faint,
+    color: theme.colors.textMuted,
   },
   matchBox: {
-    marginTop: spacing.md,
+    marginTop: theme.spacing.md,
     marginLeft: 52,
-    backgroundColor: colors.accentSoft,
-    borderWidth: 1,
-    borderColor: colors.accentLine,
-    borderRadius: 14,
-    padding: spacing.md,
-    gap: spacing.xs,
+    backgroundColor: theme.colors.secondaryContainer,
+    borderRadius: theme.shape.md,
+    padding: theme.spacing.md,
+    gap: theme.spacing.xs,
   },
   matchHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
   },
   matchLabel: {
-    fontSize: 12,
-    lineHeight: 18,
+    ...theme.type.labelMedium,
     fontWeight: '600',
-    color: colors.accent,
+    color: theme.colors.onSecondaryContainer,
   },
   matchText: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.inkSoft,
+    ...theme.type.bodyMedium,
+    color: theme.colors.onSecondaryContainer,
   },
   excerpt: {
-    fontSize: 12,
-    lineHeight: 19,
-    color: colors.muted,
+    ...theme.type.bodySmall,
+    color: theme.colors.onSecondaryContainer,
+    opacity: 0.8,
   },
-})
-
+}))

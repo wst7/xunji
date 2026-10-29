@@ -1,10 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Ionicons } from '@expo/vector-icons'
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Animated, Pressable, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { colors, radius, shadow, spacing, type } from '../theme'
+import { makeStyles, useTheme, withAlpha } from '../theme'
 
 type ToastType = 'info' | 'success' | 'warning' | 'error'
 
@@ -32,22 +32,24 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null)
 
-const TONE: Record<
-  ToastType,
-  { icon: 'checkmark-circle' | 'information-circle' | 'warning' | 'alert-circle'; fg: string }
-> = {
-  info: { icon: 'information-circle', fg: colors.muted },
-  success: { icon: 'checkmark-circle', fg: colors.success },
-  warning: { icon: 'warning', fg: colors.warning },
-  error: { icon: 'alert-circle', fg: colors.error },
+const ICON: Record<ToastType, 'checkmark-circle' | 'information-circle' | 'warning' | 'alert-circle'> = {
+  info: 'information-circle',
+  success: 'checkmark-circle',
+  warning: 'warning',
+  error: 'alert-circle',
 }
 
-/** 按压反馈用 120ms 的线性位移，成功态直接给一个勾，而不是只换文字。 */
+/**
+ * MD3 snackbar：inverseSurface 底色浮在导航栏之上，保持最多 3 条。
+ * 语义靠图标形状区分，颜色统一用 inversePrimary，深浅两套主题都够清楚。
+ */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([])
   const nextId = useRef(1)
   const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>())
   const insets = useSafeAreaInsets()
+  const theme = useTheme()
+  const styles = useStyles()
 
   const dismiss = useCallback((id: number) => {
     const timer = timers.current.get(id)
@@ -89,50 +91,54 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         pointerEvents="box-none"
         style={[
           styles.host,
-          { paddingBottom: Math.max(insets.bottom, spacing.sm) + 64 + spacing.sm },
+          {
+            paddingBottom:
+              insets.bottom + theme.layout.navBarHeight + theme.spacing.lg,
+          },
         ]}
       >
         {items.map((item) => (
-          <ToastCard
-            key={item.id}
-            item={item}
-            onDismiss={() => dismiss(item.id)}
-          />
+          <Snackbar key={item.id} item={item} onDismiss={() => dismiss(item.id)} />
         ))}
       </View>
     </ToastContext.Provider>
   )
 }
 
-function ToastCard({ item, onDismiss }: { item: ToastItem; onDismiss: () => void }) {
+function Snackbar({ item, onDismiss }: { item: ToastItem; onDismiss: () => void }) {
+  const theme = useTheme()
+  const styles = useStyles()
   const enter = useRef(new Animated.Value(0)).current
-  const tone = TONE[item.type]
 
   useEffect(() => {
     Animated.spring(enter, {
       toValue: 1,
       useNativeDriver: true,
-      damping: 18,
-      stiffness: 220,
-      mass: 0.7,
+      ...theme.motion.spring.expressive,
     }).start()
-  }, [enter])
+  }, [enter, theme.motion.spring.expressive])
 
   return (
     <Animated.View
+      accessibilityLiveRegion="polite"
       style={[
-        styles.toast,
+        styles.snackbar,
         {
           opacity: enter,
           transform: [
             {
-              translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }),
+              translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }),
             },
           ],
         },
       ]}
     >
-      <Ionicons name={tone.icon} size={20} color={tone.fg} style={styles.icon} />
+      <Ionicons
+        name={ICON[item.type]}
+        size={20}
+        color={theme.colors.inversePrimary}
+        style={styles.icon}
+      />
       <View style={styles.body}>
         <Text style={styles.message}>{item.message}</Text>
         {item.action && (
@@ -142,10 +148,11 @@ function ToastCard({ item, onDismiss }: { item: ToastItem; onDismiss: () => void
               onDismiss()
             }}
             accessibilityRole="button"
+            android_ripple={{ color: withAlpha(theme.colors.inversePrimary, 0.16) }}
             style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
           >
             <Text style={styles.action}>{item.action.label}</Text>
-            <Ionicons name="chevron-forward" size={13} color={colors.accent} />
+            <Ionicons name="chevron-forward" size={14} color={theme.colors.inversePrimary} />
           </Pressable>
         )}
       </View>
@@ -156,7 +163,7 @@ function ToastCard({ item, onDismiss }: { item: ToastItem; onDismiss: () => void
         hitSlop={10}
         style={({ pressed }) => [styles.close, pressed && styles.pressed]}
       >
-        <Ionicons name="close" size={16} color={colors.faint} />
+        <Ionicons name="close" size={18} color={theme.colors.inverseOnSurface} />
       </Pressable>
     </Animated.View>
   )
@@ -168,36 +175,34 @@ export function useToast(): ToastContextValue {
   return value
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   host: {
     position: 'absolute',
-    left: spacing.lg,
-    right: spacing.lg,
+    left: theme.spacing.lg,
+    right: theme.spacing.lg,
     bottom: 0,
-    gap: spacing.sm,
+    gap: theme.spacing.sm,
   },
-  toast: {
+  snackbar: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.card,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    ...shadow.floating,
+    gap: theme.spacing.md,
+    backgroundColor: theme.colors.inverseSurface,
+    borderRadius: theme.shape.xs,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md + 2,
+    ...theme.elevation.level3,
   },
   icon: {
     marginTop: 1,
   },
   body: {
     flex: 1,
-    gap: spacing.xs,
+    gap: theme.spacing.xs,
   },
   message: {
-    ...type.body,
-    color: colors.inkSoft,
+    ...theme.type.bodyMedium,
+    color: theme.colors.inverseOnSurface,
   },
   actionButton: {
     flexDirection: 'row',
@@ -207,9 +212,9 @@ const styles = StyleSheet.create({
     minHeight: 32,
   },
   action: {
-    ...type.caption,
-    color: colors.accent,
+    ...theme.type.labelLarge,
     fontWeight: '600',
+    color: theme.colors.inversePrimary,
   },
   close: {
     width: 24,
@@ -220,4 +225,4 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.55,
   },
-})
+}))
