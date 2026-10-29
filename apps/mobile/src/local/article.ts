@@ -562,28 +562,29 @@ export function extractFromHtml(html: string, url: string): ExtractedArticle {
     ?? domText('#js_name')
   const language = firstMatch(html, /<html\b[^>]*\blang\s*=\s*["']([^"']+)["']/i)
 
+  // noscript 里的内容在解析后可能被当成普通节点，也可能是一整段原始 HTML 文本；
+  // 先原样留一份，再清理正文，避免清理时把它一起删掉。
+  const noscriptRaw = $('noscript')
+    .map((_, element) => $(element).text())
+    .get()
+    .join('\n')
+    .trim()
+
   const picked = pickBody($)
   stripNoise($, picked.node, picked.wechat)
   let markdown = tidyMarkdown(renderMarkdown(picked.node), picked.wechat)
   let plainText = toPlainText(markdown)
 
   // 页面外壳没渲染出正文时，按“已有信息量”从大到小再试三轮。
-  if (plainText.length < 120) {
-    const noscript = $('noscript')
-      .map((_, element) => $(element).text())
-      .get()
-      .join('\n')
-      .trim()
-    if (noscript.length >= 200 && /<\w+/.test(noscript)) {
-      const inner = load(noscript)
-      const node = inner('body').first()[0] ?? inner.root()[0]
-      stripNoise(inner, node, false)
-      const candidate = tidyMarkdown(renderMarkdown(node), false)
-      const candidateText = toPlainText(candidate)
-      if (candidateText.length > plainText.length + 80) {
-        markdown = candidate
-        plainText = candidateText
-      }
+  if (plainText.length < 120 && noscriptRaw.length >= 200 && /<\w+/.test(noscriptRaw)) {
+    const inner = load(noscriptRaw)
+    const node = inner('body').first()[0] ?? inner.root()[0]
+    stripNoise(inner, node, false)
+    const candidate = tidyMarkdown(renderMarkdown(node), false)
+    const candidateText = toPlainText(candidate)
+    if (candidateText.length > plainText.length + 80) {
+      markdown = candidate
+      plainText = candidateText
     }
   }
 
