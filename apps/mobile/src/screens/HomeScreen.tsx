@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +12,7 @@ import {
 } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import type { ScrollViewInstance } from 'react-native'
 import type { ParseStatus, SearchResult } from '@xunji/shared'
 import { errorMessage, STATUS_TEXT } from '@xunji/shared'
 
@@ -76,6 +77,31 @@ export function HomeScreen() {
 
   const inResults = lastQuery.length > 0
   const bottomPad = Math.max(insets.bottom, spacing.sm) + layout.tabBarSpace
+
+  const homeScroll = useRef<ScrollViewInstance>(null)
+  const keyboardWait = useRef<{ remove: () => void } | null>(null)
+
+  // 收藏框贴着屏幕底部，键盘弹起后要把它滚进可视区，否则会被键盘挡住。
+  const revealSaveField = useCallback(() => {
+    const reveal = () => homeScroll.current?.scrollToEnd({ animated: true })
+    if (Keyboard.isVisible()) {
+      requestAnimationFrame(reveal)
+      return
+    }
+    keyboardWait.current?.remove()
+    keyboardWait.current = Keyboard.addListener('keyboardDidShow', () => {
+      keyboardWait.current?.remove()
+      keyboardWait.current = null
+      reveal()
+    })
+  }, [])
+
+  useEffect(
+    () => () => {
+      keyboardWait.current?.remove()
+    },
+    [],
+  )
 
   // 首页聚焦时把积压的本机任务推进一轮（保存、分享、重试都走这里）。
   useFocusEffect(
@@ -154,10 +180,7 @@ export function HomeScreen() {
 
   return (
     <Screen>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <KeyboardAvoidingView style={styles.flex} behavior="padding">
         {inResults ? (
           <ScrollView
             style={styles.flex}
@@ -230,6 +253,7 @@ export function HomeScreen() {
           </ScrollView>
         ) : (
           <ScrollView
+            ref={homeScroll}
             style={styles.flex}
             contentContainerStyle={[styles.homeContent, { paddingBottom: bottomPad }]}
             keyboardShouldPersistTaps="handled"
@@ -253,7 +277,11 @@ export function HomeScreen() {
                 onSubmit={() => void runSearch(query)}
                 loading={searching}
               />
-              <SaveField style={styles.saveCard} onSave={handleSave} />
+              <SaveField
+                style={styles.saveCard}
+                onSave={handleSave}
+                onFocus={revealSaveField}
+              />
             </View>
           </ScrollView>
         )}

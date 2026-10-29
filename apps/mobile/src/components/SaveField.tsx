@@ -16,6 +16,7 @@ import { colors, radius, shadow, spacing, type } from '../theme'
 
 interface SaveFieldProps {
   onSave: (url: string, titleHint: string | null) => Promise<boolean>
+  onFocus?: () => void
   disabled?: boolean
   style?: StyleProp<ViewStyle>
 }
@@ -32,7 +33,7 @@ function withScheme(text: string): string | null {
  * 首页的「收藏」面：粘贴链接后立刻识别出 URL，
  * 识别成功才点亮保存按钮；分享进来的整段文字也能直接放进来。
  */
-export function SaveField({ onSave, disabled = false, style }: SaveFieldProps) {
+export function SaveField({ onSave, onFocus, disabled = false, style }: SaveFieldProps) {
   const [value, setValue] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -85,7 +86,10 @@ export function SaveField({ onSave, disabled = false, style }: SaveFieldProps) {
             setValue(text)
             if (error) setError(null)
           }}
-          onFocus={() => setFocused(true)}
+          onFocus={() => {
+            setFocused(true)
+            onFocus?.()
+          }}
           onBlur={() => setFocused(false)}
           placeholder="https://mp.weixin.qq.com/s/…"
           placeholderTextColor={colors.faint}
@@ -179,7 +183,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 76,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: spacing.sm,
     padding: spacing.md + 2,
     borderRadius: radius.control + 4,
@@ -193,10 +197,11 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
+    height: 44,
     fontSize: 14.5,
     lineHeight: 22,
     color: colors.ink,
-    padding: 0,
+    paddingVertical: 0,
   },
   round: {
     width: 44,

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons'
+import Constants from 'expo-constants'
 import { useCallback, useState } from 'react'
 import {
   KeyboardAvoidingView,
@@ -305,7 +306,9 @@ export function SettingsScreen() {
             <Text style={styles.dangerText}>清空全部收藏</Text>
           </Pressable>
 
-          <Text style={styles.footer}>{APP_NAME} · 只保存在这台手机上</Text>
+          <Text style={styles.footer}>
+            {APP_NAME} · v{Constants.expoConfig?.version ?? '—'} · 只保存在这台手机上
+          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
       <AppTabBar active="settings" />
