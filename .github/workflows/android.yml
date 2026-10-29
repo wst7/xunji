@@ -37,6 +37,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 打 v* 标签时，把标签号作为 App 的 versionName 写进安装包（v0.3.1 → 0.3.1）。
+      - name: 读取发布版本
+        if: github.ref_type == 'tag'
+        run: echo "XUNJI_APP_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22

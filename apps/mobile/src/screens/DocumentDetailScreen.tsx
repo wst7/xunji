@@ -34,10 +34,10 @@ import { colors, radius, shadow, spacing, type } from '../theme'
 
 function DetailTopBar({
   onBack,
-  onOpen,
+  onDelete,
 }: {
   onBack: () => void
-  onOpen?: () => void
+  onDelete?: () => void
 }) {
   return (
     <View style={styles.topbar}>
@@ -51,15 +51,15 @@ function DetailTopBar({
         <Ionicons name="chevron-back" size={21} color={colors.ink} />
       </Pressable>
       <Text style={styles.topbarTitle}>收藏详情</Text>
-      {onOpen ? (
+      {onDelete ? (
         <Pressable
-          onPress={onOpen}
+          onPress={onDelete}
           accessibilityRole="button"
-          accessibilityLabel="打开原文"
+          accessibilityLabel="删除这篇收藏"
           hitSlop={8}
           style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
         >
-          <Ionicons name="open-outline" size={19} color={colors.ink} />
+          <Ionicons name="trash-outline" size={19} color={colors.error} />
         </Pressable>
       ) : (
         <View style={styles.iconPlaceholder} />
@@ -185,7 +185,7 @@ export function DocumentDetailScreen() {
 
   return (
     <Screen>
-      <DetailTopBar onBack={goBack} onOpen={() => void openOriginal()} />
+      <DetailTopBar onBack={goBack} onDelete={confirmDelete} />
 
       <ScrollView
         contentContainerStyle={[
@@ -273,16 +273,6 @@ export function DocumentDetailScreen() {
         {related.length > 0 && (
           <RelatedList items={related} onPress={(nextId) => router.push(`/documents/${nextId}`)} />
         )}
-
-        <Pressable
-          onPress={confirmDelete}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: deleting, busy: deleting }}
-          style={({ pressed }) => [styles.delete, pressed && styles.pressed]}
-        >
-          <Ionicons name="trash-outline" size={16} color={colors.error} />
-          <Text style={styles.deleteText}>{deleting ? '删除中…' : '删除这篇收藏'}</Text>
-        </Pressable>
       </ScrollView>
 
       <View style={[styles.actionBar, { paddingBottom: actionBarPad }]}>
@@ -475,18 +465,6 @@ const styles = StyleSheet.create({
   emptyBody: {
     ...type.body,
     color: colors.muted,
-  },
-  delete: {
-    marginTop: spacing.xl,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    minHeight: 44,
-  },
-  deleteText: {
-    ...type.caption,
-    color: colors.error,
   },
   actionBar: {
     position: 'absolute',
