@@ -12,7 +12,7 @@ const config: ExpoConfig = {
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'light',
-  backgroundColor: '#F5F6F8',
+  backgroundColor: '#F4F5F8',
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'com.xunji.app',
@@ -31,7 +31,7 @@ const config: ExpoConfig = {
     package: 'com.xunji.app',
     predictiveBackGestureEnabled: false,
     adaptiveIcon: {
-      backgroundColor: '#F5F6F8',
+      backgroundColor: '#F4F5F8',
       foregroundImage: './assets/android-icon-foreground.png',
       backgroundImage: './assets/android-icon-background.png',
       monochromeImage: './assets/android-icon-monochrome.png',
@@ -42,7 +42,7 @@ const config: ExpoConfig = {
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#F5F6F8',
+        backgroundColor: '#F4F5F8',
         image: './assets/splash-icon.png',
         imageWidth: 160,
       },

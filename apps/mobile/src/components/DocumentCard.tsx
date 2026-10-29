@@ -1,54 +1,18 @@
 import { Ionicons } from '@expo/vector-icons'
-import type { DocumentSummary, SearchResult } from '@xunji/shared'
+import type { SearchResult } from '@xunji/shared'
 import { domainOf, formatRelativeDate, sourceLabel, SOURCE_TYPE_LABELS } from '@xunji/shared'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
-import { colors, radius, shadow, spacing, type } from '../theme'
+import { colors, radius, shadow, spacing, tintFor } from '../theme'
 import { LiveStatusBadge } from './LiveStatusBadge'
 
-function domainInitial(url: string): string {
-  const host = domainOf(url).replace(/^www\./i, '')
-  return host.charAt(0).toUpperCase() || '拾'
+/** 有站点名就用站点名首字（“知”“少”），否则退回域名首字母；颜色由来源稳定决定。 */
+function sourceSeed(url: string, siteName: string | null): string {
+  return (siteName && siteName.trim()) || domainOf(url).replace(/^www\./i, '') || '拾'
 }
 
-interface DocumentCardProps {
-  doc: DocumentSummary
-  onPress: () => void
-  onTerminal?: (status: DocumentSummary['parse_status']) => void
-}
-
-export function DocumentCard({ doc, onPress, onTerminal }: DocumentCardProps) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={doc.title || doc.url}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
-    >
-      <View style={styles.row}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{domainInitial(doc.url)}</Text>
-        </View>
-        <View style={styles.body}>
-          <Text style={styles.title} numberOfLines={2}>
-            {doc.title || doc.url}
-          </Text>
-          {doc.summary_short && (
-            <Text style={styles.summary} numberOfLines={2}>
-              {doc.summary_short}
-            </Text>
-          )}
-          <View style={styles.metaRow}>
-            <Text style={styles.meta} numberOfLines={1}>
-              {sourceLabel(doc.url, doc.site_name, SOURCE_TYPE_LABELS[doc.source_type])} ·{' '}
-              {formatRelativeDate(doc.saved_at)}
-            </Text>
-            <LiveStatusBadge docId={doc.id} status={doc.parse_status} onTerminal={onTerminal} />
-          </View>
-        </View>
-      </View>
-    </Pressable>
-  )
+function initialOf(seed: string): string {
+  return Array.from(seed.trim())[0] ?? '拾'
 }
 
 interface SearchResultCardProps {
@@ -58,16 +22,19 @@ interface SearchResultCardProps {
 }
 
 export function SearchResultCard({ item, onPress, onTerminal }: SearchResultCardProps) {
+  const seed = sourceSeed(item.url, item.site_name)
+  const tint = tintFor(seed)
+
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={item.title || item.url}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.card, styles.stacked, pressed && styles.pressed]}
     >
       <View style={styles.row}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{domainInitial(item.url)}</Text>
+        <View style={[styles.avatar, { backgroundColor: tint.bg }]}>
+          <Text style={[styles.avatarText, { color: tint.fg }]}>{initialOf(seed)}</Text>
         </View>
         <View style={styles.body}>
           <Text style={styles.title} numberOfLines={2}>
@@ -85,7 +52,7 @@ export function SearchResultCard({ item, onPress, onTerminal }: SearchResultCard
             />
           </View>
           {item.summary && (
-            <Text style={styles.summary} numberOfLines={3}>
+            <Text style={styles.summary} numberOfLines={2}>
               {item.summary}
             </Text>
           )}
@@ -94,7 +61,7 @@ export function SearchResultCard({ item, onPress, onTerminal }: SearchResultCard
 
       <View style={styles.matchBox}>
         <View style={styles.matchHead}>
-          <Ionicons name="sparkles-outline" size={13} color={colors.accent} />
+          <Ionicons name="sparkles" size={13} color={colors.accent} />
           <Text style={styles.matchLabel}>为什么找到它</Text>
         </View>
         <Text style={styles.matchText}>{item.match_reason}</Text>
@@ -112,8 +79,13 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.lineSoft,
     padding: spacing.lg,
     ...shadow.card,
+  },
+  stacked: {
+    padding: spacing.lg,
   },
   pressed: {
     opacity: 0.85,
@@ -127,21 +99,22 @@ const styles = StyleSheet.create({
   avatar: {
     width: 40,
     height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.accentSoft,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    color: colors.accent,
-    fontSize: 17,
+    fontSize: 16,
+    lineHeight: 22,
     fontWeight: '700',
   },
   body: {
     flex: 1,
-    gap: spacing.xs,
+    minWidth: 0,
+    gap: 3,
   },
   metaRow: {
+    marginTop: 1,
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
@@ -149,15 +122,20 @@ const styles = StyleSheet.create({
     rowGap: spacing.xs,
   },
   title: {
-    ...type.title,
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '600',
+    letterSpacing: -0.2,
     color: colors.ink,
   },
   summary: {
-    ...type.body,
+    fontSize: 13,
+    lineHeight: 20,
     color: colors.muted,
   },
   meta: {
-    ...type.caption,
+    fontSize: 11.5,
+    lineHeight: 16,
     flexShrink: 1,
     color: colors.faint,
   },
@@ -165,28 +143,32 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     marginLeft: 52,
     backgroundColor: colors.accentSoft,
+    borderWidth: 1,
+    borderColor: colors.accentLine,
     borderRadius: 14,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    padding: spacing.md,
     gap: spacing.xs,
   },
   matchHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
   },
   matchLabel: {
-    ...type.caption,
-    color: colors.accent,
+    fontSize: 12,
+    lineHeight: 18,
     fontWeight: '600',
+    color: colors.accent,
   },
   matchText: {
-    ...type.body,
+    fontSize: 13,
+    lineHeight: 20,
     color: colors.inkSoft,
   },
   excerpt: {
-    ...type.caption,
+    fontSize: 12,
+    lineHeight: 19,
     color: colors.muted,
-    fontStyle: 'italic',
   },
 })
+

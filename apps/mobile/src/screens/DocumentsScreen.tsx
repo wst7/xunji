@@ -11,25 +11,74 @@ import {
   View,
 } from 'react-native'
 import { useFocusEffect, useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus } from '@xunji/shared'
-import { errorMessage, STATUS_TEXT } from '@xunji/shared'
+import {
+  domainOf,
+  errorMessage,
+  formatRelativeDate,
+  sourceLabel,
+  SOURCE_TYPE_LABELS,
+  STATUS_TEXT,
+} from '@xunji/shared'
 
 import { AppTabBar } from '../components/AppTabBar'
-import { DocumentCard } from '../components/DocumentCard'
+import { LiveStatusBadge } from '../components/LiveStatusBadge'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Notice } from '../components/ui/Notice'
 import { Screen } from '../components/ui/Screen'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import * as repo from '../local/repo'
 import { useToast } from '../providers/ToastProvider'
-import { colors, radius, shadow, spacing, type } from '../theme'
+import { colors, layout, radius, shadow, spacing, tintFor, type } from '../theme'
 
 const PAGE_SIZE = 20
 const APP_NAME = '寻迹'
+const GUTTER = 20
+
+interface DocumentRowProps {
+  doc: DocumentSummary
+  onPress: () => void
+  onTerminal: (status: ParseStatus) => void
+}
+
+/** 列表行，而不是一张张卡片：整屏只浮起一张白色面板。 */
+function DocumentRow({ doc, onPress, onTerminal }: DocumentRowProps) {
+  const seed = (doc.site_name && doc.site_name.trim()) || domainOf(doc.url).replace(/^www\./i, '')
+  const tint = tintFor(seed || '拾')
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={doc.title || doc.url}
+      android_ripple={{ color: colors.surfaceMuted }}
+      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+    >
+      <View style={[styles.avatar, { backgroundColor: tint.bg }]}>
+        <Text style={[styles.avatarText, { color: tint.fg }]}>
+          {Array.from(seed.trim())[0] ?? '拾'}
+        </Text>
+      </View>
+      <View style={styles.rowBody}>
+        <Text style={styles.rowTitle} numberOfLines={1}>
+          {doc.title || doc.url}
+        </Text>
+        <Text style={styles.rowMeta} numberOfLines={1}>
+          {sourceLabel(doc.url, doc.site_name, SOURCE_TYPE_LABELS[doc.source_type])} ·{' '}
+          {formatRelativeDate(doc.saved_at)}
+        </Text>
+      </View>
+      <LiveStatusBadge docId={doc.id} status={doc.parse_status} onTerminal={onTerminal} />
+      <Ionicons name="chevron-forward" size={16} color={colors.lineStrong} />
+    </Pressable>
+  )
+}
 
 export function DocumentsScreen() {
   const router = useRouter()
   const { toast } = useToast()
+  const insets = useSafeAreaInsets()
 
   const [keywordInput, setKeywordInput] = useState('')
   const [items, setItems] = useState<DocumentSummary[]>([])
@@ -39,9 +88,11 @@ export function DocumentsScreen() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [filterFocused, setFilterFocused] = useState(false)
 
   const keyword = useDebouncedValue(keywordInput.trim(), 300)
   const requestSeq = useRef(0)
+  const bottomPad = Math.max(insets.bottom, spacing.sm) + layout.tabBarSpace
 
   const load = useCallback(
     async (nextPage: number, mode: 'replace' | 'append') => {
@@ -117,21 +168,12 @@ export function DocumentsScreen() {
 
   return (
     <Screen>
-      <View style={styles.titleBlock}>
-        <View style={styles.titleText}>
-          <Text style={styles.screenTitle}>收藏</Text>
-          <Text style={styles.screenSub}>
-            {loading ? '正在加载…' : total > 0 ? `${total} 条内容` : '你的所有链接'}
-          </Text>
-        </View>
-      </View>
-
       <FlatList
         data={items}
         keyExtractor={(doc) => doc.id}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: bottomPad }]}
         keyboardShouldPersistTaps="handled"
-        ItemSeparatorComponent={ListSeparator}
+        keyboardDismissMode="on-drag"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -142,11 +184,28 @@ export function DocumentsScreen() {
         }
         ListHeaderComponent={
           <View style={styles.header}>
-            <View style={styles.filterBox}>
-              <Ionicons name="search-outline" size={18} color={colors.faint} />
+            <Text style={styles.screenTitle}>收藏</Text>
+            <Text style={styles.screenSub}>
+              {loading
+                ? '正在加载…'
+                : keyword
+                  ? `${total} 条匹配`
+                  : total > 0
+                    ? `${total} 条内容`
+                    : '你的所有链接'}
+            </Text>
+
+            <View style={[styles.filterBox, filterFocused && styles.filterBoxFocused]}>
+              <Ionicons
+                name="search-outline"
+                size={18}
+                color={filterFocused ? colors.accent : colors.faint}
+              />
               <TextInput
                 value={keywordInput}
                 onChangeText={setKeywordInput}
+                onFocus={() => setFilterFocused(true)}
+                onBlur={() => setFilterFocused(false)}
                 placeholder="筛选收藏……"
                 placeholderTextColor={colors.faint}
                 style={styles.filterInput}
@@ -168,16 +227,30 @@ export function DocumentsScreen() {
                 </Pressable>
               ) : null}
             </View>
-            {error && <Notice text={error} tone="error" action={{ label: '重试', onPress: reload }} />}
+
+            {error && (
+              <View style={styles.notice}>
+                <Notice text={error} tone="error" action={{ label: '重试', onPress: reload }} />
+              </View>
+            )}
           </View>
         }
-        renderItem={({ item }) => (
-          <DocumentCard
-            doc={item}
-            onPress={() => router.push(`/documents/${item.id}`)}
-            onTerminal={handleTerminal}
-          />
+        renderItem={({ item, index }) => (
+          <View
+            style={[
+              styles.rowWrap,
+              index === 0 && styles.rowFirst,
+              index === items.length - 1 && styles.rowLast,
+            ]}
+          >
+            <DocumentRow
+              doc={item}
+              onPress={() => router.push(`/documents/${item.id}`)}
+              onTerminal={handleTerminal}
+            />
+          </View>
         )}
+        ItemSeparatorComponent={RowDivider}
         ListEmptyComponent={
           loading ? (
             <View style={styles.loadingRow}>
@@ -232,52 +305,49 @@ export function DocumentsScreen() {
   )
 }
 
-function ListSeparator() {
-  return <View style={styles.separator} />
+function RowDivider() {
+  return (
+    <View style={styles.dividerWrap}>
+      <View style={styles.dividerLine} />
+    </View>
+  )
 }
 
 const styles = StyleSheet.create({
-  titleBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+  listContent: {
+    flexGrow: 1,
+    paddingHorizontal: GUTTER,
+    paddingTop: spacing.sm,
   },
-  titleText: {
-    gap: 2,
+  header: {
+    paddingBottom: spacing.lg,
   },
   screenTitle: {
+    marginTop: spacing.sm,
     ...type.display,
     color: colors.ink,
   },
   screenSub: {
     ...type.caption,
+    marginTop: 3,
     color: colors.faint,
   },
-  listContent: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
-  separator: {
-    height: spacing.md,
-  },
-  header: {
-    paddingTop: 2,
-    paddingBottom: spacing.md,
-    gap: spacing.md,
-  },
   filterBox: {
+    marginTop: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 10,
     borderRadius: radius.pill,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
     backgroundColor: colors.surface,
     paddingLeft: spacing.lg,
     paddingRight: spacing.sm,
     minHeight: 52,
     ...shadow.card,
+  },
+  filterBoxFocused: {
+    borderColor: colors.accent,
   },
   filterInput: {
     ...type.body,
@@ -292,8 +362,78 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pressed: {
-    opacity: 0.55,
+  notice: {
+    marginTop: spacing.md,
+  },
+  rowWrap: {
+    backgroundColor: colors.surface,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: colors.lineSoft,
+    overflow: 'hidden',
+  },
+  rowFirst: {
+    borderTopWidth: 1,
+    borderTopLeftRadius: radius.card,
+    borderTopRightRadius: radius.card,
+  },
+  rowLast: {
+    borderBottomWidth: 1,
+    borderBottomLeftRadius: radius.card,
+    borderBottomRightRadius: radius.card,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: 14,
+    paddingLeft: spacing.lg,
+    paddingRight: 14,
+  },
+  rowPressed: {
+    backgroundColor: colors.surfaceMuted,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '700',
+  },
+  rowBody: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  rowTitle: {
+    fontSize: 14.5,
+    lineHeight: 21,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+    color: colors.ink,
+  },
+  rowMeta: {
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: colors.faint,
+  },
+  dividerWrap: {
+    height: 1,
+    backgroundColor: colors.surface,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
+    borderColor: colors.lineSoft,
+    paddingLeft: 68,
+    paddingRight: spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    backgroundColor: colors.lineSoft,
   },
   loadingRow: {
     flexDirection: 'row',
@@ -306,7 +446,7 @@ const styles = StyleSheet.create({
     color: colors.faint,
   },
   emptyWrap: {
-    paddingTop: spacing.sm,
+    paddingTop: spacing.xl,
   },
   footer: {
     paddingVertical: spacing.xl,
@@ -321,5 +461,8 @@ const styles = StyleSheet.create({
     ...type.caption,
     color: colors.accent,
     fontWeight: '600',
+  },
+  pressed: {
+    opacity: 0.55,
   },
 })

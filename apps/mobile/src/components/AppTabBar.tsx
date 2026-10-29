@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { colors, spacing, type } from '../theme'
+import { colors, radius, shadow, spacing, type } from '../theme'
 
 export type TabKey = 'home' | 'documents' | 'settings'
 
@@ -28,58 +28,95 @@ const TABS: {
   { key: 'settings', label: '我的', href: '/settings', icon: 'person-outline', activeIcon: 'person' },
 ]
 
-/** 底部标签栏固定在拇指区，选中项用品牌色 + 实心图标，不只靠颜色区分。 */
+/**
+ * 悬浮式底部标签栏：白色圆角栏浮在画布之上，选中项用浅靛蓝底 + 实心图标，
+ * 既保留 Android 的拇指区习惯，又不让整屏被一条通栏分割线切断。
+ */
 export function AppTabBar({ active }: { active: TabKey }) {
   const router = useRouter()
   const insets = useSafeAreaInsets()
 
   return (
-    <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
-      {TABS.map((tab) => {
-        const selected = tab.key === active
-        return (
-          <Pressable
-            key={tab.key}
-            onPress={() => {
-              if (!selected) router.replace(tab.href)
-            }}
-            accessibilityRole="tab"
-            accessibilityLabel={tab.label}
-            accessibilityState={{ selected }}
-            style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
-          >
-            <Ionicons
-              name={selected ? tab.activeIcon : tab.icon}
-              size={24}
-              color={selected ? colors.accent : colors.tabInactive}
-            />
-            <Text style={[styles.label, selected && styles.labelActive]}>{tab.label}</Text>
-          </Pressable>
-        )
-      })}
+    <View
+      pointerEvents="box-none"
+      style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, spacing.sm) + spacing.sm }]}
+    >
+      <View style={styles.bar}>
+        {TABS.map((tab) => {
+          const selected = tab.key === active
+          return (
+            <Pressable
+              key={tab.key}
+              onPress={() => {
+                if (!selected) router.replace(tab.href)
+              }}
+              accessibilityRole="tab"
+              accessibilityLabel={tab.label}
+              accessibilityState={{ selected }}
+              android_ripple={{ color: colors.accentSoft, borderless: true }}
+              style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
+            >
+              <View style={[styles.iconPill, selected && styles.iconPillActive]}>
+                <Ionicons
+                  name={selected ? tab.activeIcon : tab.icon}
+                  size={22}
+                  color={selected ? colors.accent : colors.tabInactive}
+                />
+              </View>
+              <Text style={[styles.label, selected && styles.labelActive]}>{tab.label}</Text>
+            </Pressable>
+          )
+        })}
+      </View>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
+  wrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 10,
+    paddingHorizontal: spacing.lg,
+  },
   bar: {
     flexDirection: 'row',
+    alignItems: 'center',
+    height: 64,
+    paddingHorizontal: 6,
+    borderRadius: radius.card + 4,
     backgroundColor: colors.surface,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.line,
-    paddingTop: spacing.sm,
-  },  tab: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    ...shadow.floating,
+  },
+  tab: {
     flex: 1,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
-    minHeight: 52,
+    gap: 1,
+    borderRadius: radius.control,
   },
   pressed: {
-    opacity: 0.55,
+    opacity: 0.7,
+  },
+  iconPill: {
+    width: 48,
+    height: 28,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconPillActive: {
+    backgroundColor: colors.accentSoft,
   },
   label: {
     ...type.caption,
+    fontSize: 11,
+    lineHeight: 15,
     color: colors.tabInactive,
   },
   labelActive: {

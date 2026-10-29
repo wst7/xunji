@@ -9,7 +9,7 @@ import { Screen } from '../components/ui/Screen'
 import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
 import { useToast } from '../providers/ToastProvider'
-import { colors, spacing, type } from '../theme'
+import { colors, radius, spacing, type } from '../theme'
 
 /** 分享进入后的保存结果页：保存到本机一次，然后跳到详情。 */
 export function ShareScreen() {
@@ -92,13 +92,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: 20,
     minHeight: 52,
   },
   iconButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: radius.control,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
@@ -110,7 +110,8 @@ const styles = StyleSheet.create({
     height: 40,
   },
   topbarTitle: {
-    ...type.body,
+    fontSize: 14,
+    lineHeight: 20,
     fontWeight: '600',
     color: colors.ink,
   },
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: 20,
     paddingTop: spacing.xl,
   },
   loading: {

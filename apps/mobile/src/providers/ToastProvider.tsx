@@ -87,7 +87,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <View
         pointerEvents="box-none"
-        style={[styles.host, { paddingBottom: Math.max(insets.bottom, 16) + 64 }]}
+        style={[
+          styles.host,
+          { paddingBottom: Math.max(insets.bottom, spacing.sm) + 64 + spacing.sm },
+        ]}
       >
         {items.map((item) => (
           <ToastCard

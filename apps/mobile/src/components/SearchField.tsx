@@ -5,50 +5,83 @@ import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react
 import { colors, radius, shadow, spacing, type } from '../theme'
 
 interface SearchFieldProps {
-  onSubmit: (query: string) => void
+  value: string
+  onChangeText: (text: string) => void
+  onSubmit: () => void
   loading?: boolean
+  autoFocus?: boolean
 }
 
-export function SearchField({ onSubmit, loading = false }: SearchFieldProps) {
-  const [value, setValue] = useState('')
+/**
+ * 搜索结果页的搜索条：聚焦时整圈靛蓝 + 柔和外圈，
+ * 输入框里直接给一个清空按钮，回车或右箭头发起检索。
+ */
+export function SearchField({
+  value,
+  onChangeText,
+  onSubmit,
+  loading = false,
+  autoFocus = false,
+}: SearchFieldProps) {
+  const [focused, setFocused] = useState(false)
   const query = value.trim()
-
-  function submit() {
-    if (!query || loading) return
-    onSubmit(query)
-  }
+  const ready = query.length > 0 && !loading
 
   return (
-    <View style={styles.box}>
-      <Ionicons name="search-outline" size={20} color={colors.faint} />
+    <View style={[styles.box, focused && styles.boxFocused]}>
+      <Ionicons
+        name="search-outline"
+        size={20}
+        color={focused ? colors.accent : colors.faint}
+      />
       <TextInput
         value={value}
-        onChangeText={setValue}
-        placeholder="想找回什么？描述一下内容"
+        onChangeText={onChangeText}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder="描述你记得的内容"
         placeholderTextColor={colors.faint}
         style={styles.input}
         selectionColor={colors.accent}
         returnKeyType="search"
-        onSubmitEditing={submit}
+        onSubmitEditing={onSubmit}
+        autoFocus={autoFocus}
         accessibilityLabel="搜索你收藏过的内容"
         editable={!loading}
       />
-      {query ? (
+      {value.length > 0 && (
         <Pressable
-          onPress={submit}
-          disabled={loading}
+          onPress={() => onChangeText('')}
           accessibilityRole="button"
-          accessibilityLabel="找回"
-          accessibilityState={{ disabled: loading, busy: loading }}
-          style={({ pressed }) => [styles.submit, pressed && styles.pressed]}
+          accessibilityLabel="清空输入"
+          hitSlop={8}
+          style={({ pressed }) => [styles.clear, pressed && styles.pressed]}
         >
-          {loading ? (
-            <ActivityIndicator size="small" color={colors.surface} />
-          ) : (
-            <Ionicons name="arrow-forward" size={20} color={colors.surface} />
-          )}
+          <Ionicons name="close-circle" size={18} color={colors.faint} />
         </Pressable>
-      ) : null}
+      )}
+      <Pressable
+        onPress={onSubmit}
+        disabled={!ready}
+        accessibilityRole="button"
+        accessibilityLabel={loading ? '查找中' : '找回'}
+        accessibilityState={{ disabled: !ready, busy: loading }}
+        style={({ pressed }) => [
+          styles.submit,
+          !ready && styles.submitDisabled,
+          pressed && styles.pressed,
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color={colors.surface} />
+        ) : (
+          <Ionicons
+            name="arrow-forward"
+            size={20}
+            color={ready ? colors.surface : colors.faint}
+          />
+        )}
+      </Pressable>
     </View>
   )
 }
@@ -57,13 +90,20 @@ const styles = StyleSheet.create({
   box: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.md - 2,
     minHeight: 56,
     borderRadius: radius.pill,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
     backgroundColor: colors.surface,
     paddingLeft: spacing.lg,
     paddingRight: 6,
     ...shadow.card,
+  },
+  boxFocused: {
+    borderColor: colors.accent,
+    ...shadow.accent,
+    shadowOpacity: 0.18,
   },
   input: {
     ...type.body,
@@ -73,6 +113,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: 0,
   },
+  clear: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   submit: {
     width: 44,
     height: 44,
@@ -80,6 +126,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
+    ...shadow.accent,
+  },
+  submitDisabled: {
+    backgroundColor: colors.lineStrong,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   pressed: {
     opacity: 0.75,

@@ -73,8 +73,8 @@ const variantStyles = StyleSheet.create({
     borderColor: colors.accent,
   },
   secondary: {
-    backgroundColor: colors.surfaceMuted,
-    borderColor: 'transparent',
+    backgroundColor: colors.surface,
+    borderColor: colors.lineStrong,
   },
   ghost: {
     backgroundColor: 'transparent',
@@ -84,7 +84,7 @@ const variantStyles = StyleSheet.create({
 
 const pressedStyles = StyleSheet.create({
   primary: { backgroundColor: colors.accentDeep, borderColor: colors.accentDeep },
-  secondary: { backgroundColor: colors.line },
+  secondary: { backgroundColor: colors.surfaceMuted },
   ghost: { backgroundColor: colors.accentSoft },
 })
 
