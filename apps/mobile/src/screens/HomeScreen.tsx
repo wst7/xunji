@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   View,
 } from 'react-native'
@@ -28,7 +27,7 @@ import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
 import { useLocalRevision } from '../local/useLocalRevision'
 import { useToast } from '../providers/ToastProvider'
-import { colors, layout, radius, spacing, type } from '../theme'
+import { makeStyles, useTheme } from '../theme'
 
 const APP_NAME = '寻迹'
 
@@ -46,17 +45,21 @@ function terminalToastContent(status: ParseStatus): {
   }
 }
 
+/** Small top app bar：品牌标 + 标题，右侧是「仅本机」assist chip。 */
 function BrandBar() {
+  const theme = useTheme()
+  const styles = useStyles()
+
   return (
     <View style={styles.brandbar}>
       <View style={styles.brand}>
         <View style={styles.mark}>
-          <Ionicons name="bookmark" size={15} color={colors.surface} />
+          <Ionicons name="bookmark" size={16} color={theme.colors.onPrimary} />
         </View>
         <Text style={styles.brandname}>{APP_NAME}</Text>
       </View>
       <View style={styles.localchip}>
-        <Ionicons name="shield-checkmark-outline" size={12} color={colors.accent} />
+        <Ionicons name="shield-checkmark-outline" size={14} color={theme.colors.primary} />
         <Text style={styles.localchipText}>仅本机</Text>
       </View>
     </View>
@@ -68,6 +71,8 @@ export function HomeScreen() {
   const { toast } = useToast()
   const revision = useLocalRevision()
   const insets = useSafeAreaInsets()
+  const theme = useTheme()
+  const styles = useStyles()
 
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[] | null>(null)
@@ -76,7 +81,7 @@ export function HomeScreen() {
   const [lastQuery, setLastQuery] = useState('')
 
   const inResults = lastQuery.length > 0
-  const bottomPad = Math.max(insets.bottom, spacing.sm) + layout.tabBarSpace
+  const bottomPad = insets.bottom + theme.layout.navBarHeight + theme.spacing.lg
 
   const homeScroll = useRef<ScrollViewInstance>(null)
   const keyboardWait = useRef<{ remove: () => void } | null>(null)
@@ -213,7 +218,7 @@ export function HomeScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="清除搜索，回到首页"
                 hitSlop={8}
-                style={({ pressed }) => pressed && styles.pressed}
+                style={({ pressed }) => [styles.textButton, pressed && styles.pressed]}
               >
                 <Text style={styles.viewall}>清除</Text>
               </Pressable>
@@ -227,7 +232,7 @@ export function HomeScreen() {
 
             {searching && results === null ? (
               <View style={styles.loadingRow}>
-                <ActivityIndicator size="small" color={colors.accent} />
+                <ActivityIndicator size="small" color={theme.colors.primary} />
                 <Text style={styles.loadingText}>正在找回……</Text>
               </View>
             ) : results === null ? null : results.length === 0 ? (
@@ -291,83 +296,76 @@ export function HomeScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   flex: {
     flex: 1,
   },
   homeContent: {
     flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: spacing.xs,
+    paddingHorizontal: theme.layout.gutter,
   },
   resultsContent: {
     flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: spacing.xs,
+    paddingHorizontal: theme.layout.gutter,
   },
   brandbar: {
-    minHeight: 44,
-    paddingTop: 6,
+    minHeight: theme.layout.appBarSmall,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: theme.spacing.md,
   },
   brand: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: theme.spacing.sm,
   },
   mark: {
-    width: 28,
-    height: 28,
-    borderRadius: 9,
-    backgroundColor: colors.accent,
+    width: 32,
+    height: 32,
+    borderRadius: theme.shape.sm,
+    backgroundColor: theme.colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   brandname: {
-    fontSize: 20,
-    lineHeight: 26,
-    fontWeight: '700',
-    letterSpacing: -0.4,
-    color: colors.ink,
+    ...theme.type.titleLarge,
+    color: theme.colors.text,
   },
   localchip: {
-    height: 26,
-    paddingHorizontal: 10,
+    height: 32,
+    paddingHorizontal: theme.spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    borderRadius: radius.pill,
+    gap: theme.spacing.xs,
+    borderRadius: theme.shape.sm,
     borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.surface,
+    borderColor: theme.colors.outlineVariant,
   },
   localchipText: {
-    fontSize: 11,
-    lineHeight: 15,
-    color: colors.muted,
+    ...theme.type.labelMedium,
+    color: theme.colors.textMuted,
   },
   hero: {
-    marginTop: 30,
-    gap: spacing.sm,
+    marginTop: theme.spacing.xl,
+    gap: theme.spacing.sm,
   },
   heroTitle: {
-    ...type.display,
-    color: colors.ink,
+    ...theme.type.headlineLarge,
+    color: theme.colors.text,
   },
   heroEm: {
-    color: colors.accent,
+    color: theme.colors.primary,
   },
   heroLede: {
-    ...type.body,
-    color: colors.muted,
+    ...theme.type.bodyLarge,
+    color: theme.colors.textMuted,
   },
   actions: {
     flex: 1,
     minHeight: 0,
-    marginTop: 26,
-    gap: 14,
+    marginTop: theme.spacing.xl,
+    gap: theme.spacing.md,
   },
   askCard: {
     flex: 1.12,
@@ -378,47 +376,50 @@ const styles = StyleSheet.create({
     minHeight: 170,
   },
   searchhead: {
-    marginTop: 14,
+    marginTop: theme.spacing.lg,
   },
   resulthead: {
-    marginTop: 20,
-    marginBottom: spacing.md,
+    marginTop: theme.spacing.xl,
+    marginBottom: theme.spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   resultcount: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: colors.muted,
+    ...theme.type.bodyMedium,
+    color: theme.colors.textMuted,
   },
   resultcountStrong: {
-    color: colors.ink,
-    fontWeight: '700',
+    ...theme.type.titleMedium,
+    color: theme.colors.text,
+  },
+  textButton: {
+    minHeight: 32,
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.sm,
   },
   viewall: {
-    fontSize: 12.5,
-    lineHeight: 18,
+    ...theme.type.labelLarge,
     fontWeight: '600',
-    color: colors.accent,
+    color: theme.colors.primary,
   },
   notice: {
-    marginBottom: spacing.md,
+    marginBottom: theme.spacing.md,
   },
   cards: {
-    gap: spacing.md,
+    gap: theme.spacing.md,
   },
   loadingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xxl,
+    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.xxl,
   },
   loadingText: {
-    ...type.caption,
-    color: colors.faint,
+    ...theme.type.bodySmall,
+    color: theme.colors.textMuted,
   },
   pressed: {
     opacity: 0.55,
   },
-})
+}))

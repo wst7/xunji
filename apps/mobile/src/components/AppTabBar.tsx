@@ -1,10 +1,10 @@
 import type { ComponentProps } from 'react'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { colors, radius, shadow, spacing, type } from '../theme'
+import { makeStyles, useTheme, withAlpha } from '../theme'
 
 export type TabKey = 'home' | 'documents' | 'settings'
 
@@ -29,17 +29,19 @@ const TABS: {
 ]
 
 /**
- * 悬浮式底部标签栏：白色圆角栏浮在画布之上，选中项用浅靛蓝底 + 实心图标，
- * 既保留 Android 的拇指区习惯，又不让整屏被一条通栏分割线切断。
+ * MD3 NavigationBar：通栏贴在底部、surfaceContainer 底色，
+ * 选中项是 64×32 的 secondaryContainer 胶囊 + 实心图标。
  */
 export function AppTabBar({ active }: { active: TabKey }) {
   const router = useRouter()
   const insets = useSafeAreaInsets()
+  const theme = useTheme()
+  const styles = useStyles()
 
   return (
     <View
       pointerEvents="box-none"
-      style={[styles.wrap, { paddingBottom: Math.max(insets.bottom, spacing.sm) + spacing.sm }]}
+      style={[styles.wrap, { paddingBottom: insets.bottom }]}
     >
       <View style={styles.bar}>
         {TABS.map((tab) => {
@@ -53,14 +55,14 @@ export function AppTabBar({ active }: { active: TabKey }) {
               accessibilityRole="tab"
               accessibilityLabel={tab.label}
               accessibilityState={{ selected }}
-              android_ripple={{ color: colors.accentSoft, borderless: true }}
+              android_ripple={{ color: withAlpha(theme.colors.primary, 0.12) }}
               style={({ pressed }) => [styles.tab, pressed && styles.pressed]}
             >
               <View style={[styles.iconPill, selected && styles.iconPillActive]}>
                 <Ionicons
                   name={selected ? tab.activeIcon : tab.icon}
-                  size={22}
-                  color={selected ? colors.accent : colors.tabInactive}
+                  size={24}
+                  color={selected ? theme.colors.onSecondaryContainer : theme.colors.onSurfaceVariant}
                 />
               </View>
               <Text style={[styles.label, selected && styles.labelActive]}>{tab.label}</Text>
@@ -72,55 +74,48 @@ export function AppTabBar({ active }: { active: TabKey }) {
   )
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   wrap: {
     position: 'absolute',
     left: 0,
     right: 0,
     bottom: 0,
     zIndex: 10,
-    paddingHorizontal: spacing.lg,
+    backgroundColor: theme.colors.surfaceContainer,
   },
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 64,
-    paddingHorizontal: 6,
-    borderRadius: radius.card + 4,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    ...shadow.floating,
+    height: theme.layout.navBarHeight,
+    paddingHorizontal: theme.spacing.sm,
   },
   tab: {
     flex: 1,
-    height: 56,
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 1,
-    borderRadius: radius.control,
+    paddingTop: theme.spacing.md,
+    gap: theme.spacing.xs,
   },
   pressed: {
     opacity: 0.7,
   },
   iconPill: {
-    width: 48,
-    height: 28,
-    borderRadius: radius.pill,
+    width: 64,
+    height: 32,
+    borderRadius: theme.shape.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconPillActive: {
-    backgroundColor: colors.accentSoft,
+    backgroundColor: theme.colors.secondaryContainer,
   },
   label: {
-    ...type.caption,
-    fontSize: 11,
-    lineHeight: 15,
-    color: colors.tabInactive,
+    ...theme.type.labelMedium,
+    color: theme.colors.onSurfaceVariant,
   },
   labelActive: {
-    color: colors.accent,
+    color: theme.colors.onSurface,
     fontWeight: '600',
   },
-})
+}))

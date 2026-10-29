@@ -6,10 +6,8 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  StyleSheet,
   Switch,
   Text,
-  TextInput,
   View,
 } from 'react-native'
 import { useFocusEffect } from 'expo-router'
@@ -19,6 +17,7 @@ import { AppTabBar } from '../components/AppTabBar'
 import { Button } from '../components/ui/Button'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { Screen } from '../components/ui/Screen'
+import { TextField } from '../components/ui/TextField'
 import {
   DEFAULT_LLM,
   loadLlmState,
@@ -31,7 +30,7 @@ import * as repo from '../local/repo'
 import type { DocumentStats } from '../local/repo'
 import { useLocalRevision } from '../local/useLocalRevision'
 import { useToast } from '../providers/ToastProvider'
-import { colors, fonts, layout, radius, shadow, spacing, type } from '../theme'
+import { makeStyles, useTheme, withAlpha } from '../theme'
 
 const APP_NAME = '寻迹'
 
@@ -48,6 +47,8 @@ export function SettingsScreen() {
   const { toast } = useToast()
   const revision = useLocalRevision()
   const insets = useSafeAreaInsets()
+  const theme = useTheme()
+  const styles = useStyles()
 
   const [stats, setStats] = useState<DocumentStats | null>(null)
   const [hasKey, setHasKey] = useState(false)
@@ -59,7 +60,7 @@ export function SettingsScreen() {
   const [testing, setTesting] = useState(false)
   const [confirmingClear, setConfirmingClear] = useState(false)
 
-  const bottomPad = Math.max(insets.bottom, spacing.sm) + layout.tabBarSpace
+  const bottomPad = insets.bottom + theme.layout.navBarHeight + theme.spacing.lg
 
   const reload = useCallback(async () => {
     try {
@@ -169,13 +170,22 @@ export function SettingsScreen() {
           <View style={styles.panel}>
             <View style={styles.panelTop}>
               <Text style={styles.panelTopText}>本机收藏</Text>
-              <Ionicons name="phone-portrait-outline" size={16} color={colors.panelSoft} />
+              <Ionicons
+                name="phone-portrait-outline"
+                size={16}
+                color={theme.colors.inverseOnSurface}
+              />
             </View>
             <View style={styles.panelValueRow}>
               <Text style={styles.panelValue}>{stats === null ? '—' : stats.total}</Text>
               <Text style={styles.panelUnit}>条</Text>
             </View>
-            <View style={styles.panelBar}>
+            <View
+              style={[
+                styles.panelBar,
+                { backgroundColor: withAlpha(theme.colors.inverseOnSurface, 0.16) },
+              ]}
+            >
               <View style={[styles.panelBarFill, { width: `${ratio}%` }]} />
             </View>
             <Text style={styles.panelFoot}>
@@ -193,64 +203,47 @@ export function SettingsScreen() {
               <Switch
                 value={enabled}
                 onValueChange={setEnabled}
-                trackColor={{ false: colors.lineStrong, true: colors.accent }}
-                thumbColor={colors.surface}
-                ios_backgroundColor={colors.lineStrong}
+                trackColor={{ false: theme.colors.surfaceContainerHighest, true: theme.colors.primary }}
+                thumbColor={enabled ? theme.colors.onPrimary : theme.colors.outline}
+                ios_backgroundColor={theme.colors.surfaceContainerHighest}
                 accessibilityLabel="使用大模型写摘要"
               />
             </View>
 
             <View style={styles.divider} />
 
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>服务地址</Text>
-              <TextInput
-                value={baseUrl}
-                onChangeText={setBaseUrl}
-                placeholder={DEFAULT_LLM.baseUrl}
-                placeholderTextColor={colors.faint}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-                style={styles.input}
-                selectionColor={colors.accent}
-                accessibilityLabel="大模型服务地址"
-              />
-            </View>
+            <TextField
+              label="服务地址"
+              value={baseUrl}
+              onChangeText={setBaseUrl}
+              placeholder={DEFAULT_LLM.baseUrl}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              accessibilityLabel="大模型服务地址"
+            />
 
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>模型名称</Text>
-              <TextInput
-                value={model}
-                onChangeText={setModel}
-                placeholder={DEFAULT_LLM.model}
-                placeholderTextColor={colors.faint}
-                autoCapitalize="none"
-                autoCorrect={false}
-                style={styles.input}
-                selectionColor={colors.accent}
-                accessibilityLabel="模型名称"
-              />
-            </View>
+            <TextField
+              label="模型名称"
+              value={model}
+              onChangeText={setModel}
+              placeholder={DEFAULT_LLM.model}
+              autoCapitalize="none"
+              autoCorrect={false}
+              accessibilityLabel="模型名称"
+            />
 
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>API Key</Text>
-              <TextInput
-                value={apiKey}
-                onChangeText={setApiKey}
-                placeholder={hasKey ? '已保存在系统钥匙串，留空则不修改' : '填写你的 API Key'}
-                placeholderTextColor={colors.faint}
-                autoCapitalize="none"
-                autoCorrect={false}
-                secureTextEntry
-                style={styles.input}
-                selectionColor={colors.accent}
-                accessibilityLabel="大模型 API Key"
-              />
-              <Text style={styles.fieldHint}>
-                密钥只写入系统钥匙串，不会上传，也不会出现在日志里。
-              </Text>
-            </View>
+            <TextField
+              label="API Key"
+              value={apiKey}
+              onChangeText={setApiKey}
+              placeholder={hasKey ? '已保存在系统钥匙串，留空则不修改' : '填写你的 API Key'}
+              autoCapitalize="none"
+              autoCorrect={false}
+              secureTextEntry
+              hint="密钥只写入系统钥匙串，不会上传，也不会出现在日志里。"
+              accessibilityLabel="大模型 API Key"
+            />
 
             <View style={styles.actions}>
               <Button
@@ -275,7 +268,7 @@ export function SettingsScreen() {
           <View style={styles.groupCard}>
             <View style={styles.row}>
               <View style={styles.softicon}>
-                <Ionicons name="bookmark-outline" size={19} color={colors.inkSoft} />
+                <Ionicons name="bookmark-outline" size={19} color={theme.colors.onSurfaceVariant} />
               </View>
               <View style={styles.rowBody}>
                 <Text style={styles.rowTitle}>本机存储</Text>
@@ -285,7 +278,7 @@ export function SettingsScreen() {
             <View style={styles.divider} />
             <View style={styles.row}>
               <View style={styles.softicon}>
-                <Ionicons name="sync-outline" size={19} color={colors.inkSoft} />
+                <Ionicons name="sync-outline" size={19} color={theme.colors.onSurfaceVariant} />
               </View>
               <View style={styles.rowBody}>
                 <Text style={styles.rowTitle}>多端同步</Text>
@@ -300,9 +293,10 @@ export function SettingsScreen() {
             onPress={() => setConfirmingClear(true)}
             accessibilityRole="button"
             accessibilityLabel="清空全部收藏"
+            android_ripple={{ color: withAlpha(theme.colors.error, 0.12) }}
             style={({ pressed }) => [styles.dangerButton, pressed && styles.pressed]}
           >
-            <Ionicons name="trash-outline" size={18} color={colors.error} />
+            <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
             <Text style={styles.dangerText}>清空全部收藏</Text>
           </Pressable>
 
@@ -328,27 +322,25 @@ export function SettingsScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   flex: {
     flex: 1,
   },
   content: {
-    paddingHorizontal: 20,
-    paddingTop: spacing.sm,
+    paddingHorizontal: theme.layout.gutter,
   },
   screenTitle: {
-    marginTop: spacing.sm,
-    ...type.display,
-    color: colors.ink,
+    ...theme.type.headlineMedium,
+    marginTop: theme.spacing.sm,
+    color: theme.colors.text,
   },
   panel: {
-    marginTop: spacing.lg,
-    borderRadius: radius.card,
-    backgroundColor: colors.panel,
-    paddingHorizontal: spacing.lg + 2,
-    paddingVertical: spacing.lg,
-    ...shadow.action,
-    shadowOpacity: 0.18,
+    marginTop: theme.spacing.lg,
+    borderRadius: theme.shape.xl,
+    backgroundColor: theme.colors.inverseSurface,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.xl,
+    ...theme.elevation.level1,
   },
   panelTop: {
     flexDirection: 'row',
@@ -356,168 +348,125 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   panelTopText: {
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '500',
-    color: colors.panelSoft,
+    ...theme.type.labelMedium,
+    color: theme.colors.inverseOnSurface,
   },
   panelValueRow: {
-    marginTop: 6,
+    marginTop: theme.spacing.xs,
     flexDirection: 'row',
     alignItems: 'baseline',
   },
   panelValue: {
-    fontSize: 32,
-    lineHeight: 36,
+    ...theme.type.displaySmall,
     fontWeight: '700',
-    letterSpacing: -1.1,
-    color: colors.white,
+    letterSpacing: -1,
+    color: theme.colors.inverseOnSurface,
     fontVariant: ['tabular-nums'],
   },
   panelUnit: {
-    marginLeft: 5,
-    fontSize: 13,
-    lineHeight: 18,
-    fontWeight: '500',
-    color: colors.panelSoft,
+    marginLeft: theme.spacing.xs,
+    ...theme.type.bodyMedium,
+    color: theme.colors.inverseOnSurface,
   },
   panelBar: {
-    marginTop: 14,
-    height: 4,
-    borderRadius: radius.pill,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    marginTop: theme.spacing.md,
+    height: 6,
+    borderRadius: theme.shape.full,
     overflow: 'hidden',
   },
   panelBarFill: {
     height: '100%',
-    borderRadius: radius.pill,
-    backgroundColor: colors.panelBar,
+    borderRadius: theme.shape.full,
+    backgroundColor: theme.colors.inversePrimary,
   },
   panelFoot: {
-    marginTop: 10,
-    fontSize: 11.5,
-    lineHeight: 17,
-    color: colors.panelSoft,
+    marginTop: theme.spacing.md,
+    ...theme.type.bodySmall,
+    color: theme.colors.inverseOnSurface,
     fontVariant: ['tabular-nums'],
   },
   groupLabel: {
-    marginTop: 18,
-    marginBottom: spacing.sm,
-    marginLeft: spacing.xs,
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '500',
-    color: colors.faint,
+    ...theme.type.labelMedium,
+    marginTop: theme.spacing.xl,
+    marginBottom: theme.spacing.sm,
+    marginLeft: theme.spacing.xs,
+    color: theme.colors.textMuted,
   },
   groupCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: colors.lineSoft,
-    padding: spacing.lg,
-    ...shadow.card,
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.shape.lg,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.md,
+    ...theme.elevation.level1,
   },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: theme.spacing.md,
     minHeight: 48,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: theme.spacing.md,
     minHeight: 48,
-    paddingVertical: spacing.xs,
   },
   softicon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: colors.surfaceMuted,
+    width: 40,
+    height: 40,
+    borderRadius: theme.shape.full,
+    backgroundColor: theme.colors.surfaceContainerHigh,
     alignItems: 'center',
     justifyContent: 'center',
   },
   rowBody: {
     flex: 1,
-    gap: 3,
+    gap: 2,
   },
   rowTitle: {
-    fontSize: 14.5,
-    lineHeight: 21,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-    color: colors.ink,
+    ...theme.type.titleSmall,
+    color: theme.colors.text,
   },
   rowSub: {
-    fontSize: 12.5,
-    lineHeight: 18,
-    color: colors.muted,
+    ...theme.type.bodySmall,
+    color: theme.colors.textMuted,
   },
   divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.line,
-    marginVertical: 10,
-  },
-  field: {
-    gap: spacing.xs,
-    paddingVertical: 2,
-    marginBottom: spacing.sm,
-  },
-  fieldLabel: {
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '600',
-    color: colors.muted,
-  },
-  input: {
-    fontSize: 13,
-    lineHeight: 19,
-    color: colors.ink,
-    letterSpacing: -0.1,
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radius.control,
-    paddingHorizontal: spacing.md,
-    minHeight: 42,
-    fontFamily: fonts.display,
-  },
-  fieldHint: {
-    fontSize: 11,
-    lineHeight: 16,
-    color: colors.faint,
+    height: 1,
+    backgroundColor: theme.colors.outlineVariant,
   },
   actions: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
   },
   actionButton: {
     flex: 1,
   },
   dangerButton: {
-    marginTop: spacing.xl,
+    marginTop: theme.spacing.xl,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
+    gap: theme.spacing.sm,
     minHeight: 48,
-    borderRadius: radius.control,
-    backgroundColor: colors.surface,
+    borderRadius: theme.shape.full,
     borderWidth: 1,
-    borderColor: colors.lineSoft,
+    borderColor: theme.colors.error,
+    overflow: 'hidden',
   },
   dangerText: {
-    ...type.body,
-    color: colors.error,
+    ...theme.type.labelLarge,
+    color: theme.colors.error,
     fontWeight: '600',
   },
   pressed: {
     opacity: 0.6,
   },
   footer: {
-    marginTop: spacing.xl,
+    marginTop: theme.spacing.xl,
     textAlign: 'center',
-    ...type.caption,
-    color: colors.faint,
+    ...theme.type.bodySmall,
+    color: theme.colors.textMuted,
   },
-})
+}))

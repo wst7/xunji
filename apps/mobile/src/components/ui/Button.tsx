@@ -1,11 +1,13 @@
 import type { ComponentProps } from 'react'
 import { Ionicons } from '@expo/vector-icons'
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import type { StyleProp, ViewStyle } from 'react-native'
 
-import { colors, radius, type } from '../../theme'
+import { makeStyles, useTheme, withAlpha } from '../../theme'
+import type { AppTheme } from '../../theme'
 
-type Variant = 'primary' | 'secondary' | 'ghost'
+/** primary = filled，tonal = 次要强调，secondary = outlined，ghost = text。 */
+type Variant = 'primary' | 'tonal' | 'secondary' | 'ghost'
 type Size = 'default' | 'small'
 type IconName = ComponentProps<typeof Ionicons>['name']
 
@@ -21,10 +23,17 @@ interface ButtonProps {
   accessibilityLabel?: string
 }
 
-const ICON_COLORS: Record<Variant, string> = {
-  primary: colors.white,
-  secondary: colors.ink,
-  ghost: colors.accent,
+/** 文字/图标颜色：填充按钮用 onPrimary，其余用 primary 语义色。 */
+function foreground(theme: AppTheme, variant: Variant): string {
+  switch (variant) {
+    case 'primary':
+      return theme.colors.onPrimary
+    case 'tonal':
+      return theme.colors.onSecondaryContainer
+    case 'secondary':
+    case 'ghost':
+      return theme.colors.primary
+  }
 }
 
 export function Button({
@@ -38,7 +47,12 @@ export function Button({
   style,
   accessibilityLabel,
 }: ButtonProps) {
+  const theme = useTheme()
+  const styles = useStyles()
   const inactive = disabled || loading
+  const fg = foreground(theme, variant)
+  const iconSize = size === 'small' ? 16 : 18
+
   return (
     <Pressable
       onPress={onPress}
@@ -46,80 +60,72 @@ export function Button({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled: inactive, busy: loading }}
+      android_ripple={{ color: withAlpha(fg, 0.16) }}
       style={({ pressed }) => [
         styles.base,
         size === 'small' ? styles.small : styles.defaultSize,
-        variantStyles[variant],
-        pressed && !inactive && pressedStyles[variant],
+        styles[variant],
+        pressed && !inactive && styles.pressed,
         inactive && styles.disabled,
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={variant === 'primary' ? colors.white : colors.accent} />
+        <ActivityIndicator size="small" color={fg} />
       ) : (
         <View style={styles.content}>
-          {icon && <Ionicons name={icon} size={18} color={ICON_COLORS[variant]} />}
-          <Text style={[styles.label, labelStyles[variant]]}>{label}</Text>
+          {icon && <Ionicons name={icon} size={iconSize} color={fg} />}
+          <Text style={[styles.label, { color: fg }]} numberOfLines={1}>
+            {label}
+          </Text>
         </View>
       )}
     </Pressable>
   )
 }
 
-const variantStyles = StyleSheet.create({
-  primary: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
-  secondary: {
-    backgroundColor: colors.surface,
-    borderColor: colors.lineStrong,
-  },
-  ghost: {
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
-  },
-})
-
-const pressedStyles = StyleSheet.create({
-  primary: { backgroundColor: colors.accentDeep, borderColor: colors.accentDeep },
-  secondary: { backgroundColor: colors.surfaceMuted },
-  ghost: { backgroundColor: colors.accentSoft },
-})
-
-const labelStyles = StyleSheet.create({
-  primary: { color: colors.white },
-  secondary: { color: colors.ink },
-  ghost: { color: colors.accent },
-})
-
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   base: {
-    borderRadius: radius.control,
+    minHeight: 48,
     borderWidth: 1,
+    borderColor: 'transparent',
+    borderRadius: theme.shape.full,
+    paddingHorizontal: theme.spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    overflow: 'hidden',
   },
   defaultSize: {
-    minHeight: 52,
+    minHeight: 48,
   },
   small: {
-    minHeight: 44,
-    paddingHorizontal: 16,
+    minHeight: 40,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  primary: {
+    backgroundColor: theme.colors.primary,
+  },
+  tonal: {
+    backgroundColor: theme.colors.secondaryContainer,
+  },
+  secondary: {
+    borderColor: theme.colors.outline,
+  },
+  ghost: {},
+  pressed: {
+    opacity: 0.86,
   },
   disabled: {
-    opacity: 0.45,
+    opacity: 0.38,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: theme.spacing.sm,
   },
   label: {
-    ...type.body,
+    ...theme.type.labelLarge,
     fontWeight: '600',
   },
-})
+}))

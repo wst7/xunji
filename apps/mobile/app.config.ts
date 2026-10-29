@@ -5,12 +5,16 @@ const isProduction = process.env.APP_VARIANT === 'production'
 
 // 版本号跟发布 tag 走：CI 打 v* 标签时注入 XUNJI_APP_VERSION（v0.3.1 → 0.3.1）。
 // 本地构建回退到这里的默认值。Android 的 versionCode 由版本号推导，升级安装不会退版。
-const rawVersion: string = process.env.XUNJI_APP_VERSION ?? '0.3.1'
+const rawVersion: string = process.env.XUNJI_APP_VERSION ?? '0.4.0'
 const appVersion = rawVersion.replace(/^v/, '')
 const [versionMajor = 0, versionMinor = 0, versionPatch = 0] = appVersion
   .split('.')
   .map((part) => Number.parseInt(part, 10) || 0)
 const versionCode = versionMajor * 10000 + versionMinor * 100 + versionPatch
+
+// 与 src/design/colorSchemes.ts 的 surface 保持一致，避免原生动画/启动时闪白或闪黑。
+const LIGHT_SURFACE = '#FCF8FD'
+const DARK_SURFACE = '#131316'
 
 const config: ExpoConfig = {
   name: '寻迹',
@@ -20,8 +24,8 @@ const config: ExpoConfig = {
   platforms: ['ios', 'android'],
   orientation: 'portrait',
   icon: './assets/icon.png',
-  userInterfaceStyle: 'light',
-  backgroundColor: '#F4F5F8',
+  userInterfaceStyle: 'automatic',
+  backgroundColor: LIGHT_SURFACE,
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'com.xunji.app',
@@ -53,9 +57,13 @@ const config: ExpoConfig = {
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#F4F5F8',
+        backgroundColor: LIGHT_SURFACE,
         image: './assets/splash-icon.png',
         imageWidth: 160,
+        dark: {
+          backgroundColor: DARK_SURFACE,
+          image: './assets/splash-icon.png',
+        },
       },
     ],
     'expo-secure-store',

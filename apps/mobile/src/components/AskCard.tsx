@@ -1,16 +1,9 @@
 import { Ionicons } from '@expo/vector-icons'
 import { useState } from 'react'
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native'
+import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
 import type { StyleProp, ViewStyle } from 'react-native'
 
-import { colors, radius, shadow, spacing, type } from '../theme'
+import { makeStyles, useTheme } from '../theme'
 
 interface AskCardProps {
   value: string
@@ -21,10 +14,12 @@ interface AskCardProps {
 }
 
 /**
- * 首页的「提问」面：整块可书写的浅灰输入区，而不是一条细输入框。
+ * 首页的「提问」面：MD3 elevated card + filled text field，
  * 提交按钮只输入内容后点亮，避免空查询发出无意义的请求。
  */
 export function AskCard({ value, onChangeText, onSubmit, loading = false, style }: AskCardProps) {
+  const theme = useTheme()
+  const styles = useStyles()
   const [focused, setFocused] = useState(false)
   const ready = value.trim().length > 0 && !loading
 
@@ -32,7 +27,7 @@ export function AskCard({ value, onChangeText, onSubmit, loading = false, style 
     <View style={[styles.card, style]}>
       <View style={styles.head}>
         <View style={styles.softicon}>
-          <Ionicons name="sparkles" size={19} color={colors.accent} />
+          <Ionicons name="sparkles" size={20} color={theme.colors.onSecondaryContainer} />
         </View>
         <View style={styles.headText}>
           <Text style={styles.title}>提问</Text>
@@ -40,19 +35,20 @@ export function AskCard({ value, onChangeText, onSubmit, loading = false, style 
         </View>
       </View>
 
-      <View style={[styles.field, focused && styles.fieldFocused]}>
+      <View style={styles.field}>
         <TextInput
           value={value}
           onChangeText={onChangeText}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           placeholder="比如：那篇讲睡眠不足为什么会让焦虑加重的文章"
-          placeholderTextColor={colors.faint}
+          placeholderTextColor={theme.colors.outline}
           multiline
           maxLength={200}
           textAlignVertical="top"
           style={styles.input}
-          selectionColor={colors.accent}
+          selectionColor={theme.colors.primary}
+          cursorColor={theme.colors.primary}
           returnKeyType="search"
           submitBehavior="submit"
           onSubmitEditing={() => {
@@ -67,47 +63,44 @@ export function AskCard({ value, onChangeText, onSubmit, loading = false, style 
           accessibilityRole="button"
           accessibilityLabel={loading ? '查找中' : '开始查找'}
           accessibilityState={{ disabled: !ready, busy: loading }}
-          style={({ pressed }) => [
-            styles.round,
-            !ready && styles.roundDisabled,
-            pressed && styles.pressed,
-          ]}
+          style={({ pressed }) => [styles.submitHit, pressed && styles.pressed]}
         >
-          {loading ? (
-            <ActivityIndicator size="small" color={colors.surface} />
-          ) : (
-            <Ionicons
-              name="arrow-forward"
-              size={20}
-              color={ready ? colors.surface : colors.faint}
-            />
-          )}
+          <View style={[styles.submit, !ready && styles.submitDisabled]}>
+            {loading ? (
+              <ActivityIndicator size="small" color={theme.colors.onPrimary} />
+            ) : (
+              <Ionicons
+                name="arrow-forward"
+                size={20}
+                color={ready ? theme.colors.onPrimary : theme.colors.textMuted}
+              />
+            )}
+          </View>
         </Pressable>
+        <View style={[styles.indicator, focused && styles.indicatorFocused]} />
       </View>
     </View>
   )
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   card: {
-    padding: spacing.lg + 4,
-    borderRadius: radius.card + 4,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    gap: spacing.md + 2,
-    ...shadow.action,
+    padding: theme.spacing.lg + 2,
+    borderRadius: theme.shape.lgIncreased,
+    backgroundColor: theme.colors.card,
+    gap: theme.spacing.md,
+    ...theme.elevation.level1,
   },
   head: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: theme.spacing.md,
   },
   softicon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: colors.accentSoft,
+    width: 40,
+    height: 40,
+    borderRadius: theme.shape.full,
+    backgroundColor: theme.colors.secondaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -115,54 +108,63 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    ...type.title,
-    color: colors.ink,
+    ...theme.type.titleMedium,
+    color: theme.colors.text,
   },
   sub: {
-    ...type.caption,
+    ...theme.type.bodySmall,
     marginTop: 1,
-    color: colors.faint,
+    color: theme.colors.textMuted,
   },
   field: {
     flex: 1,
     minHeight: 88,
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: spacing.sm,
-    padding: spacing.md + 2,
-    borderRadius: radius.control + 4,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    backgroundColor: colors.surfaceMuted,
-  },
-  fieldFocused: {
-    borderColor: colors.accent,
-    backgroundColor: colors.surface,
+    gap: theme.spacing.sm,
+    padding: theme.spacing.md,
+    borderTopLeftRadius: theme.shape.sm,
+    borderTopRightRadius: theme.shape.sm,
+    backgroundColor: theme.colors.field,
+    overflow: 'hidden',
   },
   input: {
     flex: 1,
     alignSelf: 'stretch',
-    fontSize: 15.5,
-    lineHeight: 24,
-    color: colors.ink,
+    ...theme.type.bodyLarge,
+    color: theme.colors.text,
     padding: 0,
     paddingTop: 1,
   },
-  round: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.accent,
+  submitHit: {
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadow.accent,
   },
-  roundDisabled: {
-    backgroundColor: colors.lineStrong,
-    shadowOpacity: 0,
-    elevation: 0,
+  submit: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.shape.full,
+    backgroundColor: theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitDisabled: {
+    backgroundColor: theme.colors.surfaceContainerHighest,
+  },
+  indicator: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 2,
+    backgroundColor: 'transparent',
+  },
+  indicatorFocused: {
+    backgroundColor: theme.colors.primary,
   },
   pressed: {
     opacity: 0.75,
   },
-})
+}))

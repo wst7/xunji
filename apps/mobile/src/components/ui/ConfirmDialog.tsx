@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
-import { Animated, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Animated, Modal, Pressable, Text, View } from 'react-native'
 
-import { colors, radius, shadow, spacing, type } from '../../theme'
+import { makeStyles, useTheme, withAlpha } from '../../theme'
 
 interface ConfirmDialogProps {
   visible: boolean
@@ -17,6 +17,7 @@ interface ConfirmDialogProps {
 /**
  * 应用内确认框：原生 Alert 的按钮颜色跟随系统主题，会跳出品牌色，
  * 所以删除、退出这类动作统一用这里，配色与页面一致。
+ * MD3 basic dialog：surfaceContainerHigh、28 圆角、弹性缩放进出。
  */
 export function ConfirmDialog({
   visible,
@@ -28,15 +29,23 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const theme = useTheme()
+  const styles = useStyles()
   const enter = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
-    Animated.timing(enter, {
-      toValue: visible ? 1 : 0,
-      duration: visible ? 160 : 120,
+    if (!visible) {
+      enter.setValue(0)
+      return
+    }
+    Animated.spring(enter, {
+      toValue: 1,
       useNativeDriver: true,
+      ...theme.motion.spring.standard,
     }).start()
-  }, [visible, enter])
+  }, [visible, enter, theme.motion.spring.standard])
+
+  const scale = enter.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] })
 
   return (
     <Modal
@@ -46,18 +55,12 @@ export function ConfirmDialog({
       statusBarTranslucent
       onRequestClose={onCancel}
     >
-      <Animated.View style={[styles.scrim, { opacity: enter }]}>
+      <Animated.View
+        style={[styles.scrim, { backgroundColor: withAlpha(theme.colors.scrim, 0.32), opacity: enter }]}
+      >
         <Pressable style={styles.scrimFill} onPress={onCancel} accessibilityLabel="关闭对话框" />
         <Animated.View
-          style={[
-            styles.card,
-            {
-              opacity: enter,
-              transform: [
-                { scale: enter.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) },
-              ],
-            },
-          ]}
+          style={[styles.card, { opacity: enter, transform: [{ scale }] }]}
           accessibilityViewIsModal
         >
           <Text style={styles.title}>{title}</Text>
@@ -66,16 +69,20 @@ export function ConfirmDialog({
             <Pressable
               onPress={onCancel}
               accessibilityRole="button"
-              style={({ pressed }) => [styles.action, styles.cancel, pressed && styles.pressed]}
+              android_ripple={{ color: withAlpha(theme.colors.primary, 0.12) }}
+              style={({ pressed }) => [styles.cancel, pressed && styles.pressed]}
             >
               <Text style={styles.cancelText}>{cancelLabel}</Text>
             </Pressable>
             <Pressable
               onPress={onConfirm}
               accessibilityRole="button"
+              android_ripple={{
+                color: withAlpha(destructive ? theme.colors.onError : theme.colors.onPrimary, 0.16),
+              }}
               style={({ pressed }) => [
-                styles.action,
-                destructive ? styles.destructive : styles.confirm,
+                styles.confirm,
+                destructive ? styles.destructive : styles.filled,
                 pressed && styles.pressed,
               ]}
             >
@@ -90,13 +97,12 @@ export function ConfirmDialog({
   )
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   scrim: {
     flex: 1,
-    backgroundColor: 'rgba(14, 17, 22, 0.45)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: theme.spacing.xl,
   },
   scrimFill: {
     position: 'absolute',
@@ -108,60 +114,65 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: colors.surface,
-    borderRadius: radius.card,
-    padding: spacing.xl,
-    gap: spacing.sm,
-    ...shadow.floating,
+    backgroundColor: theme.colors.surfaceContainerHigh,
+    borderRadius: theme.shape.xl,
+    padding: theme.spacing.xl,
+    ...theme.elevation.level3,
   },
   title: {
-    ...type.title,
-    fontSize: 18,
-    color: colors.ink,
+    ...theme.type.headlineSmall,
+    color: theme.colors.text,
   },
   message: {
-    ...type.body,
-    color: colors.muted,
+    ...theme.type.bodyMedium,
+    color: theme.colors.textMuted,
+    marginTop: theme.spacing.lg,
   },
   actions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.xl,
   },
-  action: {
-    minHeight: 44,
-    minWidth: 88,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.control,
+  cancel: {
+    minHeight: 40,
+    minWidth: 80,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.shape.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cancel: {
-    backgroundColor: colors.surfaceMuted,
-  },
   confirm: {
-    backgroundColor: colors.accent,
+    minHeight: 40,
+    minWidth: 88,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.shape.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filled: {
+    backgroundColor: theme.colors.primary,
   },
   destructive: {
-    backgroundColor: colors.errorSoft,
+    backgroundColor: theme.colors.error,
   },
   cancelText: {
-    ...type.body,
+    ...theme.type.labelLarge,
     fontWeight: '600',
-    color: colors.inkSoft,
+    color: theme.colors.primary,
   },
   confirmText: {
-    ...type.body,
+    ...theme.type.labelLarge,
     fontWeight: '600',
-    color: colors.white,
+    color: theme.colors.onPrimary,
   },
   destructiveText: {
-    ...type.body,
+    ...theme.type.labelLarge,
     fontWeight: '600',
-    color: colors.error,
+    color: theme.colors.onError,
   },
   pressed: {
     opacity: 0.75,
   },
-})
+}))

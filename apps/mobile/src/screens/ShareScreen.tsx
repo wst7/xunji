@@ -1,15 +1,16 @@
-import { Ionicons } from '@expo/vector-icons'
 import { useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Text, View } from 'react-native'
 import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { errorMessage, isValidHttpUrl } from '@xunji/shared'
 
 import { EmptyState } from '../components/ui/EmptyState'
 import { Screen } from '../components/ui/Screen'
+import { TopAppBar } from '../components/ui/TopAppBar'
 import { processPendingQueue } from '../local/pipeline'
 import * as repo from '../local/repo'
 import { useToast } from '../providers/ToastProvider'
-import { colors, radius, spacing, type } from '../theme'
+import { makeStyles, useTheme } from '../theme'
 
 /** 分享进入后的保存结果页：保存到本机一次，然后跳到详情。 */
 export function ShareScreen() {
@@ -19,6 +20,9 @@ export function ShareScreen() {
   const rawHint = Array.isArray(params.hint) ? params.hint[0] : params.hint
   const url = rawUrl && isValidHttpUrl(rawUrl) ? rawUrl : null
   const { toast } = useToast()
+  const insets = useSafeAreaInsets()
+  const theme = useTheme()
+  const styles = useStyles()
 
   const started = useRef<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -50,20 +54,14 @@ export function ShareScreen() {
 
   return (
     <Screen>
-      <View style={styles.topbar}>
-        <Pressable
-          onPress={() => router.replace('/')}
-          accessibilityRole="button"
-          accessibilityLabel="返回首页"
-          hitSlop={8}
-          style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}
-        >
-          <Ionicons name="close" size={21} color={colors.ink} />
-        </Pressable>
-        <Text style={styles.topbarTitle}>保存分享</Text>
-        <View style={styles.iconPlaceholder} />
-      </View>
-      <View style={styles.content}>
+      <TopAppBar
+        title="保存分享"
+        centerTitle
+        onBack={() => router.replace('/')}
+        backIcon="close"
+        backLabel="返回首页"
+      />
+      <View style={[styles.content, { paddingBottom: insets.bottom }]}>
         {!url ? (
           <EmptyState
             title="没有可保存的链接。"
@@ -78,7 +76,7 @@ export function ShareScreen() {
           />
         ) : (
           <View style={styles.loading}>
-            <ActivityIndicator color={colors.accent} />
+            <ActivityIndicator color={theme.colors.primary} />
             <Text style={styles.loadingText}>正在保存到本机……</Text>
           </View>
         )}
@@ -87,49 +85,19 @@ export function ShareScreen() {
   )
 }
 
-const styles = StyleSheet.create({
-  topbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    minHeight: 52,
-  },
-  iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.control,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconPlaceholder: {
-    width: 40,
-    height: 40,
-  },
-  topbarTitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: '600',
-    color: colors.ink,
-  },
-  pressed: {
-    opacity: 0.6,
-  },
+const useStyles = makeStyles((theme) => ({
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: spacing.xl,
+    paddingHorizontal: theme.layout.gutter,
+    paddingTop: theme.spacing.xl,
   },
   loading: {
     alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: 40,
+    gap: theme.spacing.md,
+    paddingVertical: theme.spacing.xxl + theme.spacing.sm,
   },
   loadingText: {
-    ...type.caption,
-    color: colors.faint,
+    ...theme.type.bodyMedium,
+    color: theme.colors.textMuted,
   },
-})
+}))

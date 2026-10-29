@@ -1,10 +1,10 @@
-import { StyleSheet } from 'react-native'
 import type { ReactNode } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import { colors } from '../../theme'
+import { makeStyles } from '../../theme'
 
 export function Screen({ children }: { children: ReactNode }) {
+  const styles = useStyles()
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
       {children}
@@ -12,9 +12,9 @@ export function Screen({ children }: { children: ReactNode }) {
   )
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   screen: {
     flex: 1,
-    backgroundColor: colors.paper,
+    backgroundColor: theme.colors.canvas,
   },
-})
+}))

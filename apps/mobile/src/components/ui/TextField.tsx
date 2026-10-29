@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { StyleSheet, Text, TextInput, View } from 'react-native'
+import { Text, TextInput, View } from 'react-native'
 import type { TextInputProps } from 'react-native'
 
-import { colors, radius, spacing, type } from '../../theme'
+import { makeStyles, useTheme } from '../../theme'
 
 interface TextFieldProps extends TextInputProps {
   label?: string
@@ -10,32 +10,43 @@ interface TextFieldProps extends TextInputProps {
   error?: string | null
 }
 
+/**
+ * MD3 filled text field: tonal container, rounded top corners and a 2dp
+ * indicator that turns primary on focus and error on validation failure.
+ */
 export function TextField({ label, hint, error, style, onFocus, onBlur, ...rest }: TextFieldProps) {
+  const theme = useTheme()
+  const styles = useStyles()
   const [focused, setFocused] = useState(false)
 
   return (
     <View style={styles.wrap}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <TextInput
-        {...rest}
-        onFocus={(e) => {
-          setFocused(true)
-          onFocus?.(e)
-        }}
-        onBlur={(e) => {
-          setFocused(false)
-          onBlur?.(e)
-        }}
-        placeholderTextColor={colors.faint}
-        style={[
-          styles.input,
-          focused && styles.inputFocused,
-          !!error && styles.inputError,
-          style,
-        ]}
-        selectionColor={colors.accent}
-        accessibilityLabel={rest.accessibilityLabel ?? label}
-      />
+      <View style={styles.field}>
+        <TextInput
+          {...rest}
+          onFocus={(e) => {
+            setFocused(true)
+            onFocus?.(e)
+          }}
+          onBlur={(e) => {
+            setFocused(false)
+            onBlur?.(e)
+          }}
+          placeholderTextColor={theme.colors.outline}
+          selectionColor={theme.colors.primary}
+          cursorColor={theme.colors.primary}
+          style={[styles.input, rest.multiline && styles.inputMultiline, style]}
+          accessibilityLabel={rest.accessibilityLabel ?? label}
+        />
+        <View
+          style={[
+            styles.indicator,
+            focused && styles.indicatorFocused,
+            !!error && styles.indicatorError,
+          ]}
+        />
+      </View>
       {error ? (
         <Text style={styles.error}>{error}</Text>
       ) : hint ? (
@@ -45,40 +56,53 @@ export function TextField({ label, hint, error, style, onFocus, onBlur, ...rest 
   )
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   wrap: {
-    gap: spacing.sm,
+    gap: theme.spacing.xs,
   },
   label: {
-    ...type.caption,
-    color: colors.muted,
-    fontWeight: '600',
+    ...theme.type.bodySmall,
+    color: theme.colors.textMuted,
+    paddingHorizontal: theme.spacing.lg,
+  },
+  field: {
+    backgroundColor: theme.colors.field,
+    borderTopLeftRadius: theme.shape.sm,
+    borderTopRightRadius: theme.shape.sm,
+    overflow: 'hidden',
   },
   input: {
-    ...type.body,
-    minHeight: 52,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-    borderRadius: radius.control,
-    backgroundColor: colors.surfaceMuted,
-    color: colors.ink,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    ...theme.type.bodyLarge,
+    minHeight: 56,
+    color: theme.colors.text,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.lg,
   },
-  inputFocused: {
-    borderColor: colors.accent,
-    backgroundColor: colors.surface,
+  inputMultiline: {
+    minHeight: 112,
+    paddingTop: theme.spacing.lg,
+    textAlignVertical: 'top',
   },
-  inputError: {
-    borderColor: colors.error,
-    backgroundColor: colors.errorSoft,
+  indicator: {
+    height: 1,
+    backgroundColor: theme.colors.outlineVariant,
+  },
+  indicatorFocused: {
+    height: 2,
+    backgroundColor: theme.colors.primary,
+  },
+  indicatorError: {
+    height: 2,
+    backgroundColor: theme.colors.error,
   },
   hint: {
-    ...type.caption,
-    color: colors.faint,
+    ...theme.type.bodySmall,
+    color: theme.colors.textMuted,
+    paddingHorizontal: theme.spacing.lg,
   },
   error: {
-    ...type.caption,
-    color: colors.error,
+    ...theme.type.bodySmall,
+    color: theme.colors.error,
+    paddingHorizontal: theme.spacing.lg,
   },
-})
+}))

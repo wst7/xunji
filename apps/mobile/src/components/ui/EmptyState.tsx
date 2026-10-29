@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 
-import { colors, radius, spacing, type } from '../../theme'
+import { Button } from './Button'
+import { makeStyles, useTheme } from '../../theme'
 
 interface EmptyStateProps {
   /** 空状态用一个贴题的图标，而不是所有页面共用一个“空托盘”。 */
@@ -12,66 +13,57 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ icon = 'file-tray-outline', title, body, action }: EmptyStateProps) {
+  const theme = useTheme()
+  const styles = useStyles()
+
   return (
     <View style={styles.wrap}>
       <View style={styles.iconWrap}>
-        <Ionicons name={icon} size={26} color={colors.accent} />
+        <Ionicons name={icon} size={32} color={theme.colors.onSecondaryContainer} />
       </View>
       <Text style={styles.title}>{title}</Text>
       {body && <Text style={styles.body}>{body}</Text>}
       {action && (
-        <Pressable
+        <Button
+          label={action.label}
           onPress={action.onPress}
-          accessibilityRole="button"
-          style={({ pressed }) => [styles.action, pressed && styles.actionPressed]}
-        >
-          <Text style={styles.actionText}>{action.label}</Text>
-        </Pressable>
+          variant="tonal"
+          size="small"
+          style={styles.action}
+        />
       )}
     </View>
   )
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   wrap: {
     alignItems: 'center',
-    paddingVertical: spacing.xxl,
-    paddingHorizontal: spacing.xl,
-    gap: spacing.sm,
+    paddingVertical: theme.spacing.xxxl,
+    paddingHorizontal: theme.spacing.xl,
+    gap: theme.spacing.sm,
   },
   iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: colors.surfaceMuted,
+    width: 72,
+    height: 72,
+    borderRadius: theme.shape.full,
+    backgroundColor: theme.colors.secondaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: theme.spacing.md,
   },
   title: {
-    ...type.title,
-    color: colors.ink,
+    ...theme.type.headlineSmall,
+    color: theme.colors.text,
     textAlign: 'center',
   },
   body: {
-    ...type.body,
-    color: colors.muted,
+    ...theme.type.bodyMedium,
+    color: theme.colors.textMuted,
     textAlign: 'center',
+    maxWidth: 320,
   },
   action: {
-    marginTop: spacing.md,
-    minHeight: 44,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.xl,
-    borderRadius: radius.pill,
-    backgroundColor: colors.accentSoft,
+    marginTop: theme.spacing.lg,
   },
-  actionPressed: {
-    backgroundColor: colors.surfaceMuted,
-  },
-  actionText: {
-    ...type.body,
-    color: colors.accent,
-    fontWeight: '600',
-  },
-})
+}))

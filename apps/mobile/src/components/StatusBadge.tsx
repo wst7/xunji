@@ -1,20 +1,30 @@
 import type { ParseStatus } from '@xunji/shared'
 import { STATUS_TEXT, statusTone } from '@xunji/shared'
-import { StyleSheet, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 
-import { colors, radius, type } from '../theme'
+import { makeStyles, useTheme } from '../theme'
+import type { AppTheme } from '../theme'
 
-const TONE = {
-  accent: { fg: colors.accent, bg: colors.accentSoft },
-  success: { fg: colors.success, bg: colors.successSoft },
-  warning: { fg: colors.warning, bg: colors.warningSoft },
-  error: { fg: colors.error, bg: colors.errorSoft },
-} as const
+function toneFor(theme: AppTheme, tone: ReturnType<typeof statusTone>): { bg: string; fg: string } {
+  switch (tone) {
+    case 'success':
+      return { bg: theme.colors.successContainer, fg: theme.colors.onSuccessContainer }
+    case 'warning':
+      return { bg: theme.colors.warningContainer, fg: theme.colors.onWarningContainer }
+    case 'error':
+      return { bg: theme.colors.errorContainer, fg: theme.colors.onErrorContainer }
+    case 'accent':
+    default:
+      return { bg: theme.colors.secondaryContainer, fg: theme.colors.onSecondaryContainer }
+  }
+}
 
-/** completed 是默认结果，不再占用视觉噪音。 */
+/** completed 是默认结果，不再占用视觉噪音。MD3 assist chip，保留状态点。 */
 export function StatusBadge({ status }: { status: ParseStatus }) {
+  const theme = useTheme()
+  const styles = useStyles()
   if (status === 'completed') return null
-  const tone = TONE[statusTone(status)]
+  const tone = toneFor(theme, statusTone(status))
   return (
     <View style={[styles.badge, { backgroundColor: tone.bg }]}>
       <View style={[styles.dot, { backgroundColor: tone.fg }]} />
@@ -23,14 +33,14 @@ export function StatusBadge({ status }: { status: ParseStatus }) {
   )
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((theme) => ({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    borderRadius: radius.pill,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    gap: 6,
+    height: 32,
+    borderRadius: theme.shape.sm,
+    paddingHorizontal: theme.spacing.md,
     alignSelf: 'flex-start',
   },
   dot: {
@@ -39,7 +49,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   text: {
-    ...type.caption,
+    ...theme.type.labelMedium,
     fontWeight: '600',
   },
-})
+}))
