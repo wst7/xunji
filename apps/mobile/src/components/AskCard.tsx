@@ -33,14 +33,14 @@ export function AskCard({ value, onChangeText, onSubmit, loading = false }: AskC
         </View>
       </View>
 
-      <View style={styles.field}>
+      <View style={[styles.field, focused && styles.fieldFocused]}>
         <TextInput
           value={value}
           onChangeText={onChangeText}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           placeholder="比如：那篇讲睡眠不足为什么会让焦虑加重的文章"
-          placeholderTextColor={theme.colors.outline}
+          placeholderTextColor={theme.colors.textMuted}
           multiline
           maxLength={200}
           textAlignVertical="top"
@@ -75,7 +75,6 @@ export function AskCard({ value, onChangeText, onSubmit, loading = false }: AskC
             )}
           </View>
         </Pressable>
-        <View style={[styles.indicator, focused && styles.indicatorFocused]} />
       </View>
     </View>
   )
@@ -84,7 +83,7 @@ export function AskCard({ value, onChangeText, onSubmit, loading = false }: AskC
 const useStyles = makeStyles((theme) => ({
   card: {
     padding: theme.spacing.lg + 2,
-    borderRadius: theme.shape.lgIncreased,
+    borderRadius: theme.shape.md,
     backgroundColor: theme.colors.card,
     gap: theme.spacing.md,
     ...theme.elevation.level1,
@@ -120,10 +119,14 @@ const useStyles = makeStyles((theme) => ({
     alignItems: 'flex-end',
     gap: theme.spacing.sm,
     padding: theme.spacing.md,
-    borderTopLeftRadius: theme.shape.sm,
-    borderTopRightRadius: theme.shape.sm,
-    backgroundColor: theme.colors.field,
-    overflow: 'hidden',
+    // 找回面＝搜索胶囊：全圆角＋1.5dp 描边，与收藏面的票面方口形成形状对比。
+    borderRadius: theme.shape.full,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    backgroundColor: theme.colors.surfaceContainerHigh,
+  },
+  fieldFocused: {
+    borderColor: theme.colors.primary,
   },
   input: {
     flex: 1,
@@ -149,17 +152,6 @@ const useStyles = makeStyles((theme) => ({
   },
   submitDisabled: {
     backgroundColor: theme.colors.surfaceContainerHighest,
-  },
-  indicator: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: 2,
-    backgroundColor: 'transparent',
-  },
-  indicatorFocused: {
-    backgroundColor: theme.colors.primary,
   },
   pressed: {
     opacity: 0.75,

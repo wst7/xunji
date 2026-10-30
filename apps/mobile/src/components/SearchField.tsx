@@ -43,7 +43,7 @@ export function SearchField({
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         placeholder="描述你记得的内容"
-        placeholderTextColor={theme.colors.outline}
+        placeholderTextColor={theme.colors.textMuted}
         style={styles.input}
         selectionColor={theme.colors.primary}
         cursorColor={theme.colors.primary}
@@ -59,6 +59,7 @@ export function SearchField({
           onPress={() => onChangeText('')}
           accessibilityLabel="清空输入"
           iconSize={18}
+          variant="tonal"
         />
       )}
       <Pressable

@@ -13,7 +13,9 @@ export const fontFamilies = {
 
 /**
  * MD3 type scale. Chinese runs looser than Latin at the same tracking, so
- * body/label keep 0 and only display/headline/title tighten slightly.
+ * body keeps 0 and only display/headline/title tighten slightly. Labels are
+ * tracked (+0.5) and set like cancellation slips — the stamp world's voice —
+ * while staying inside MD3's size/weight roles.
  */
 export const typeScale = {
   displayLarge: {
@@ -105,21 +107,21 @@ export const typeScale = {
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '500',
-    letterSpacing: 0,
+    letterSpacing: 0.5,
   },
   labelMedium: {
     fontFamily: fontFamilies.sans,
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '500',
-    letterSpacing: 0,
+    letterSpacing: 0.5,
   },
   labelSmall: {
     fontFamily: fontFamilies.sans,
     fontSize: 11,
     lineHeight: 16,
     fontWeight: '500',
-    letterSpacing: 0,
+    letterSpacing: 0.5,
   },
 } satisfies Record<string, TextStyle>
 
@@ -172,7 +174,7 @@ export const motion = {
   },
 } as const
 
-export type ElevationLevel = 'level0' | 'level1' | 'level2' | 'level3' | 'accent'
+export type ElevationLevel = 'level0' | 'level1' | 'level2' | 'level3'
 
 export type Elevation = Record<ElevationLevel, ViewStyle>
 
@@ -181,7 +183,7 @@ export type Elevation = Record<ElevationLevel, ViewStyle>
  * separation where two surfaces meet. Dark mode gets softer opacity because
  * black shadows disappear into a dark canvas.
  */
-export function elevationFor(dark: boolean, accent: string): Elevation {
+export function elevationFor(dark: boolean): Elevation {
   const shadowOpacity = dark ? 0.42 : 0.12
   return {
     level0: { elevation: 0, shadowOpacity: 0 },
@@ -205,13 +207,6 @@ export function elevationFor(dark: boolean, accent: string): Elevation {
       shadowRadius: 16,
       shadowOffset: { width: 0, height: 6 },
       elevation: 6,
-    },
-    accent: {
-      shadowColor: accent,
-      shadowOpacity: dark ? 0.32 : 0.26,
-      shadowRadius: 10,
-      shadowOffset: { width: 0, height: 4 },
-      elevation: 4,
     },
   }
 }

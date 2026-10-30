@@ -1,32 +1,31 @@
 import { Ionicons } from '@expo/vector-icons'
 import type { SearchResult } from '@xunji/shared'
-import { domainOf, formatRelativeDate, sourceLabel, SOURCE_TYPE_LABELS } from '@xunji/shared'
+import { formatRelativeDate, sourceLabel, SOURCE_TYPE_LABELS } from '@xunji/shared'
 import { Pressable, Text, View } from 'react-native'
-
 import { makeStyles, useTheme, withAlpha } from '../theme'
-import { LiveStatusBadge } from './LiveStatusBadge'
-
-/** 有站点名就用站点名首字（“知”“少”），否则退回域名首字母；颜色由来源稳定决定。 */
-function sourceSeed(url: string, siteName: string | null): string {
-  return (siteName && siteName.trim()) || domainOf(url).replace(/^www\./i, '') || '拾'
-}
-
-function initialOf(seed: string): string {
-  return Array.from(seed.trim())[0] ?? '拾'
-}
+import { LivePostmark } from './Postmark'
+import { SourceStamp } from './SourceStamp'
 
 interface SearchResultCardProps {
   item: SearchResult
   onPress: () => void
   onTerminal?: (status: SearchResult['parse_status']) => void
+  /** 最强命中：票与戳都大一号——排名用视觉重量表达，不用数字角标。 */
+  strongest?: boolean
 }
 
-/** MD3 elevated card：卡面承载标题与摘要，命中理由单独一块 secondaryContainer。 */
-export function SearchResultCard({ item, onPress, onTerminal }: SearchResultCardProps) {
+/**
+ * 结果票：来源邮票居左，票面承载标题与摘要，底部一条发丝线分出
+ * 「为什么找到它」的注记段，销戳压在注记右侧（形状即状态）。
+ */
+export function SearchResultCard({
+  item,
+  onPress,
+  onTerminal,
+  strongest = false,
+}: SearchResultCardProps) {
   const theme = useTheme()
   const styles = useStyles()
-  const seed = sourceSeed(item.url, item.site_name)
-  const tint = theme.tintFor(seed)
 
   return (
     <Pressable
@@ -37,24 +36,20 @@ export function SearchResultCard({ item, onPress, onTerminal }: SearchResultCard
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.row}>
-        <View style={[styles.avatar, { backgroundColor: tint.bg }]}>
-          <Text style={[styles.avatarText, { color: tint.fg }]}>{initialOf(seed)}</Text>
-        </View>
+        <SourceStamp
+          url={item.url}
+          siteName={item.site_name}
+          hole={theme.colors.card}
+          size={strongest ? 44 : 40}
+        />
         <View style={styles.body}>
           <Text style={styles.title} numberOfLines={2}>
             {item.title || item.url}
           </Text>
-          <View style={styles.metaRow}>
-            <Text style={styles.meta} numberOfLines={1}>
-              {sourceLabel(item.url, item.site_name, SOURCE_TYPE_LABELS[item.source_type])} ·{' '}
-              {formatRelativeDate(item.saved_at)}
-            </Text>
-            <LiveStatusBadge
-              docId={item.document_id}
-              status={item.parse_status}
-              onTerminal={onTerminal}
-            />
-          </View>
+          <Text style={styles.meta} numberOfLines={1}>
+            {sourceLabel(item.url, item.site_name, SOURCE_TYPE_LABELS[item.source_type])} ·{' '}
+            {formatRelativeDate(item.saved_at)}
+          </Text>
           {item.summary && (
             <Text style={styles.summary} numberOfLines={2}>
               {item.summary}
@@ -63,17 +58,29 @@ export function SearchResultCard({ item, onPress, onTerminal }: SearchResultCard
         </View>
       </View>
 
-      <View style={styles.matchBox}>
-        <View style={styles.matchHead}>
-          <Ionicons name="sparkles" size={14} color={theme.colors.onSecondaryContainer} />
-          <Text style={styles.matchLabel}>为什么找到它</Text>
+      <View style={styles.segment} />
+
+      <View style={styles.noteRow}>
+        <View style={styles.note}>
+          <View style={styles.noteHead}>
+            <Ionicons name="sparkles" size={13} color={theme.colors.primary} />
+            <Text style={styles.noteLabel}>为什么找到它</Text>
+          </View>
+          <Text style={styles.noteText}>{item.match_reason}</Text>
+          {item.matched_excerpt && (
+            <Text style={styles.excerpt} numberOfLines={3}>
+              {item.matched_excerpt}
+            </Text>
+          )}
         </View>
-        <Text style={styles.matchText}>{item.match_reason}</Text>
-        {item.matched_excerpt && (
-          <Text style={styles.excerpt} numberOfLines={3}>
-            {item.matched_excerpt}
-          </Text>
-        )}
+        <LivePostmark
+          docId={item.document_id}
+          savedAt={item.saved_at}
+          status={item.parse_status}
+          onTerminal={onTerminal}
+          size={strongest ? 60 : 56}
+          style={styles.postmark}
+        />
       </View>
     </Pressable>
   )
@@ -82,8 +89,10 @@ export function SearchResultCard({ item, onPress, onTerminal }: SearchResultCard
 const useStyles = makeStyles((theme) => ({
   card: {
     backgroundColor: theme.colors.card,
-    borderRadius: theme.shape.lg,
-    padding: theme.spacing.lg,
+    borderRadius: theme.shape.md,
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.md,
     ...theme.elevation.level1,
   },
   pressed: {
@@ -94,68 +103,65 @@ const useStyles = makeStyles((theme) => ({
     alignItems: 'flex-start',
     gap: theme.spacing.md,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.shape.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    ...theme.type.titleMedium,
-  },
   body: {
     flex: 1,
     minWidth: 0,
     gap: 2,
   },
-  metaRow: {
-    marginTop: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    columnGap: theme.spacing.sm,
-    rowGap: theme.spacing.xs,
-  },
   title: {
     ...theme.type.titleMedium,
     color: theme.colors.text,
+  },
+  meta: {
+    ...theme.type.bodySmall,
+    marginTop: 2,
+    flexShrink: 1,
+    color: theme.colors.textMuted,
   },
   summary: {
     ...theme.type.bodyMedium,
     marginTop: 4,
     color: theme.colors.textMuted,
   },
-  meta: {
-    ...theme.type.bodySmall,
-    flexShrink: 1,
-    color: theme.colors.textMuted,
-  },
-  matchBox: {
+  segment: {
+    height: 1,
     marginTop: theme.spacing.md,
-    marginLeft: 52,
-    backgroundColor: theme.colors.secondaryContainer,
-    borderRadius: theme.shape.md,
-    padding: theme.spacing.md,
+    backgroundColor: theme.colors.divider,
+  },
+  noteRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: theme.spacing.md,
+    paddingTop: theme.spacing.md,
+  },
+  note: {
+    flex: 1,
+    minWidth: 0,
     gap: theme.spacing.xs,
   },
-  matchHead: {
+  noteHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
   },
-  matchLabel: {
-    ...theme.type.labelMedium,
-    fontWeight: '600',
-    color: theme.colors.onSecondaryContainer,
+  noteLabel: {
+    ...theme.type.labelSmall,
+    fontWeight: '700',
+    letterSpacing: 1,
+    color: theme.colors.primary,
   },
-  matchText: {
+  noteText: {
     ...theme.type.bodyMedium,
-    color: theme.colors.onSecondaryContainer,
+    color: theme.colors.text,
   },
   excerpt: {
     ...theme.type.bodySmall,
-    color: theme.colors.onSecondaryContainer,
-    opacity: 0.8,
+    color: theme.colors.textMuted,
+    fontStyle: 'italic',
+  },
+  postmark: {
+    // 票面上的戳：盖歪 −8°，并且不参与布局压缩（注记优先占宽）。
+    transform: [{ rotate: '-8deg' }],
+    marginBottom: -4,
   },
 }))

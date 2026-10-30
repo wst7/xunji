@@ -14,6 +14,7 @@ import {
 
 import { LiveStatusBadge } from '../components/LiveStatusBadge'
 import { Markdown } from '../components/Markdown'
+import { Postmark } from '../components/Postmark'
 import { RelatedList } from '../components/RelatedList'
 import { Button } from '../components/ui/Button'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
@@ -176,18 +177,23 @@ export function DocumentDetailScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.domainChip}>
-          <Ionicons
-            name="globe-outline"
-            size={14}
-            color={theme.colors.onSecondaryContainer}
-          />
-          <Text style={styles.domainText} numberOfLines={1}>
-            {domainOf(doc.url)}
-          </Text>
-        </View>
+        <View style={styles.titleRow}>
+          <View style={styles.titleCol}>
+            <View style={styles.domainChip}>
+              <Ionicons
+                name="globe-outline"
+                size={14}
+                color={theme.colors.onSecondaryContainer}
+              />
+              <Text style={styles.domainText} numberOfLines={1}>
+                {domainOf(doc.url)}
+              </Text>
+            </View>
 
-        <Text style={styles.title}>{doc.title || doc.url}</Text>
+            <Text style={styles.title}>{doc.title || doc.url}</Text>
+          </View>
+          <Postmark savedAt={doc.saved_at} status={status} size={64} style={styles.postmark} />
+        </View>
 
         <Text style={styles.meta}>
           {sourceLabel(doc.url, doc.site_name, SOURCE_TYPE_LABELS[doc.source_type])}
@@ -219,9 +225,10 @@ export function DocumentDetailScreen() {
         {(doc.summary_short || doc.summary_long) && (
           <View style={styles.summaryBlock}>
             <View style={styles.blockLabelRow}>
-              <Ionicons name="sparkles" size={16} color={theme.colors.onPrimaryContainer} />
+              <Ionicons name="sparkles" size={14} color={theme.colors.primary} />
               <Text style={styles.label}>摘要</Text>
             </View>
+            <View style={styles.summarySeg} />
             {doc.summary_short && <Text style={styles.summaryLead}>{doc.summary_short}</Text>}
             {doc.summary_long && <Text style={styles.summaryLong}>{doc.summary_long}</Text>}
           </View>
@@ -241,6 +248,11 @@ export function DocumentDetailScreen() {
         )}
 
         <View style={styles.body}>
+          <View style={styles.blockLabelRow}>
+            <Ionicons name="document-text-outline" size={14} color={theme.colors.text} />
+            <Text style={styles.bodyLabel}>原文</Text>
+          </View>
+          <View style={styles.summarySeg} />
           {bodySource ? (
             <Markdown source={bodySource} />
           ) : (
@@ -309,6 +321,20 @@ const useStyles = makeStyles((theme) => ({
     color: theme.colors.textMuted,
     textAlign: 'center',
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing.md,
+  },
+  titleCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  postmark: {
+    // 票面右上角的销戳，盖歪 −8°。
+    transform: [{ rotate: '-8deg' }],
+    marginTop: 2,
+  },
   domainChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -345,28 +371,40 @@ const useStyles = makeStyles((theme) => ({
   },
   summaryBlock: {
     marginTop: theme.spacing.lg,
-    backgroundColor: theme.colors.primaryContainer,
-    borderRadius: theme.shape.lg,
+    backgroundColor: theme.colors.card,
+    borderRadius: theme.shape.md,
     padding: theme.spacing.lg,
     gap: theme.spacing.sm,
+    ...theme.elevation.level1,
   },
   blockLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
+  summarySeg: {
+    height: 1,
+    backgroundColor: theme.colors.divider,
+  },
+  bodyLabel: {
+    ...theme.type.labelMedium,
+    color: theme.colors.text,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
   label: {
     ...theme.type.labelMedium,
-    color: theme.colors.onPrimaryContainer,
-    fontWeight: '600',
+    color: theme.colors.primary,
+    fontWeight: '700',
+    letterSpacing: 1,
   },
   summaryLead: {
     ...theme.type.titleMedium,
-    color: theme.colors.onPrimaryContainer,
+    color: theme.colors.text,
   },
   summaryLong: {
     ...theme.type.bodyMedium,
-    color: theme.colors.onPrimaryContainer,
+    color: theme.colors.textMuted,
   },
   keywordBlock: {
     marginTop: theme.spacing.lg,
@@ -398,8 +436,9 @@ const useStyles = makeStyles((theme) => ({
   body: {
     marginTop: theme.spacing.lg,
     backgroundColor: theme.colors.card,
-    borderRadius: theme.shape.lg,
+    borderRadius: theme.shape.md,
     padding: theme.spacing.lg,
+    gap: theme.spacing.sm,
     ...theme.elevation.level1,
   },
   emptyBody: {

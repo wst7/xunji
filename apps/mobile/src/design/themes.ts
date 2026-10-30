@@ -11,6 +11,7 @@ import {
   spacingScale,
   typeScale,
 } from './tokens'
+import type { Elevation } from './tokens'
 
 /**
  * Raw MD3 roles plus semantic aliases. Aliases exist because the role that
@@ -36,7 +37,7 @@ export interface AppTheme {
   type: typeof typeScale
   shape: typeof shape
   spacing: typeof spacingScale
-  elevation: ReturnType<typeof elevationFor>
+  elevation: Elevation
   motion: typeof motion
   layout: typeof layoutTokens
   fonts: typeof fontFamilies
@@ -69,7 +70,7 @@ function buildTheme(scheme: 'light' | 'dark'): AppTheme {
     type: typeScale,
     shape,
     spacing: spacingScale,
-    elevation: elevationFor(dark, colors.primary),
+    elevation: elevationFor(dark),
     motion,
     layout: layoutTokens,
     fonts: fontFamilies,

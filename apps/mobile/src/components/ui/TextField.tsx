@@ -33,7 +33,7 @@ export function TextField({ label, hint, error, style, onFocus, onBlur, ...rest 
             setFocused(false)
             onBlur?.(e)
           }}
-          placeholderTextColor={theme.colors.outline}
+          placeholderTextColor={theme.colors.textMuted}
           selectionColor={theme.colors.primary}
           cursorColor={theme.colors.primary}
           style={[styles.input, rest.multiline && styles.inputMultiline, style]}

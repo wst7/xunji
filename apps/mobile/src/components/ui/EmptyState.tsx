@@ -44,13 +44,18 @@ const useStyles = makeStyles((theme) => ({
     gap: theme.spacing.sm,
   },
   iconWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: theme.shape.full,
+    width: 68,
+    height: 68,
+    // 空状态＝一枚还没贴票的位子：邮票形、齿孔打穿露底纸。
+    borderRadius: 6,
     backgroundColor: theme.colors.secondaryContainer,
+    borderWidth: 3,
+    borderStyle: 'dotted',
+    borderColor: theme.colors.canvas,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing.md,
+    transform: [{ rotate: '-6deg' }],
   },
   title: {
     ...theme.type.headlineSmall,

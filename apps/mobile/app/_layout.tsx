@@ -79,7 +79,7 @@ function RootNavigator() {
       {!ready && (
         <View style={styles.splash}>
           <View style={styles.mark}>
-            <Ionicons name="bookmark" size={30} color={theme.colors.onPrimaryContainer} />
+            <Ionicons name="bookmark" size={30} color={theme.colors.onPrimary} />
           </View>
           <Text style={styles.brand}>寻迹 · Xunji</Text>
           <Text style={styles.tagline}>Save anything. Find it by memory.</Text>
@@ -108,8 +108,12 @@ const useStyles = makeStyles((theme) => ({
   mark: {
     width: 72,
     height: 72,
-    borderRadius: theme.shape.lgIncreased,
-    backgroundColor: theme.colors.primaryContainer,
+    borderRadius: 7,
+    backgroundColor: theme.colors.primary,
+    // 齿孔：点状边露出底纸 canvas，与原生 splash 图标、首页品牌标同一语言。
+    borderWidth: 4,
+    borderStyle: 'dotted',
+    borderColor: theme.colors.canvas,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: theme.spacing.sm,

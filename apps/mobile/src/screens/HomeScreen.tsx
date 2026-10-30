@@ -19,6 +19,7 @@ import { AppTabBar } from '../components/AppTabBar'
 import { AskCard } from '../components/AskCard'
 import { SearchResultCard } from '../components/DocumentCard'
 import { SaveField } from '../components/SaveField'
+import type { SaveResult } from '../components/SaveField'
 import { SearchField } from '../components/SearchField'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Notice } from '../components/ui/Notice'
@@ -153,7 +154,7 @@ export function HomeScreen() {
     setQuery('')
   }
 
-  async function handleSave(url: string, titleHint: string | null): Promise<boolean> {
+  async function handleSave(url: string, titleHint: string | null): Promise<SaveResult | null> {
     try {
       const res = await repo.createDocument(url, titleHint)
       if (res.duplicate) {
@@ -167,14 +168,14 @@ export function HomeScreen() {
         toast('已保存，正在本机整理内容……', { type: 'success' })
         void processPendingQueue()
       }
-      return true
+      return { id: res.id, duplicate: res.duplicate }
     } catch (e) {
       if (e instanceof Error && e.message === 'INVALID_URL') {
         toast('这不是一个可以保存的链接。', { type: 'error' })
       } else {
         toast(errorMessage(e, '保存失败，请稍后重试。'), { type: 'error' })
       }
-      return false
+      return null
     }
   }
 
@@ -245,10 +246,11 @@ export function HomeScreen() {
               )
             ) : (
               <View style={styles.cards}>
-                {results.map((item) => (
+                {results.map((item, index) => (
                   <SearchResultCard
                     key={item.document_id}
                     item={item}
+                    strongest={index === 0}
                     onPress={() => router.push(`/documents/${item.document_id}`)}
                     onTerminal={handleTerminal}
                   />
@@ -316,10 +318,14 @@ const useStyles = makeStyles((theme) => ({
     gap: theme.spacing.sm,
   },
   mark: {
-    width: 32,
-    height: 32,
-    borderRadius: theme.shape.sm,
+    width: 34,
+    height: 34,
+    borderRadius: 4,
     backgroundColor: theme.colors.primary,
+    // 齿孔：点状边露出底纸 canvas，与来源邮票同一语言。
+    borderWidth: 2.5,
+    borderStyle: 'dotted',
+    borderColor: theme.colors.canvas,
     alignItems: 'center',
     justifyContent: 'center',
   },

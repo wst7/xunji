@@ -13,7 +13,6 @@ import { useFocusEffect, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import type { DocumentSummary, ParseStatus } from '@xunji/shared'
 import {
-  domainOf,
   errorMessage,
   formatRelativeDate,
   sourceLabel,
@@ -23,6 +22,7 @@ import {
 
 import { AppTabBar } from '../components/AppTabBar'
 import { LiveStatusBadge } from '../components/LiveStatusBadge'
+import { SourceStamp } from '../components/SourceStamp'
 import { EmptyState } from '../components/ui/EmptyState'
 import { IconButton } from '../components/ui/IconButton'
 import { Notice } from '../components/ui/Notice'
@@ -41,12 +41,10 @@ interface DocumentRowProps {
   onTerminal: (status: ParseStatus) => void
 }
 
-/** MD3 两行列表项：头像、标题与元信息，右侧状态与箭头。 */
+/** MD3 两行列表项：齿孔邮票、标题与元信息，右侧状态环与箭头。 */
 function DocumentRow({ doc, onPress, onTerminal }: DocumentRowProps) {
   const theme = useTheme()
   const styles = useStyles()
-  const seed = (doc.site_name && doc.site_name.trim()) || domainOf(doc.url).replace(/^www\./i, '')
-  const tint = theme.tintFor(seed || '拾')
 
   return (
     <Pressable
@@ -56,11 +54,7 @@ function DocumentRow({ doc, onPress, onTerminal }: DocumentRowProps) {
       android_ripple={{ color: withAlpha(theme.colors.onSurface, 0.08) }}
       style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
     >
-      <View style={[styles.avatar, { backgroundColor: tint.bg }]}>
-        <Text style={[styles.avatarText, { color: tint.fg }]}>
-          {Array.from(seed.trim())[0] ?? '拾'}
-        </Text>
-      </View>
+      <SourceStamp url={doc.url} siteName={doc.site_name} hole={theme.colors.canvas} />
       <View style={styles.rowBody}>
         <Text style={styles.rowTitle} numberOfLines={1}>
           {doc.title || doc.url}
@@ -211,7 +205,7 @@ export function DocumentsScreen() {
                 onFocus={() => setFilterFocused(true)}
                 onBlur={() => setFilterFocused(false)}
                 placeholder="筛选收藏……"
-                placeholderTextColor={theme.colors.outline}
+                placeholderTextColor={theme.colors.textMuted}
                 style={styles.searchInput}
                 selectionColor={theme.colors.primary}
                 cursorColor={theme.colors.primary}
@@ -226,6 +220,7 @@ export function DocumentsScreen() {
                   onPress={() => setKeywordInput('')}
                   accessibilityLabel="清除筛选"
                   iconSize={18}
+                  variant="tonal"
                 />
               ) : null}
             </View>
@@ -363,16 +358,6 @@ const useStyles = makeStyles((theme) => ({
   },
   rowPressed: {
     backgroundColor: theme.colors.cardMuted,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.shape.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    ...theme.type.titleMedium,
   },
   rowBody: {
     flex: 1,

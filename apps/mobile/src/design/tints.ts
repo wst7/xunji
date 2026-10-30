@@ -4,26 +4,28 @@ export interface Tint {
 }
 
 /**
- * Source avatars: a stable hash picks one pair, so the same site always gets
- * the same color. Containers come from six seeds run through the same tonal
- * method as the main scheme, which is why they hold up in dark mode.
+ * Source stamps: a stable hash picks one pair, so the same site always gets
+ * the same stamp. Six seeds from the stamp-world palette (vermilion, album
+ * green, ink violet, ochre, wine, postal blue) run through the same tonal
+ * method as the main scheme — tone 90/10 in light, 35/90 in dark — so every
+ * pair clears 4.5:1 in both modes.
  */
 export const lightTints: readonly Tint[] = [
-  { bg: '#e2dfff', fg: '#0f0069' },
-  { bg: '#72f7ea', fg: '#00201d' },
-  { bg: '#ffdbca', fg: '#331200' },
-  { bg: '#ffd9e0', fg: '#3f0019' },
-  { bg: '#dce1ff', fg: '#001551' },
-  { bg: '#ebddff', fg: '#250059' },
+  { bg: '#ffdad4', fg: '#400200' },
+  { bg: '#c6ebdb', fg: '#002117' },
+  { bg: '#e8ddff', fg: '#1e1731' },
+  { bg: '#ffdf97', fg: '#251a00' },
+  { bg: '#ffd9e3', fg: '#3a071e' },
+  { bg: '#c6e7ff', fg: '#001e2d' },
 ]
 
 export const darkTints: readonly Tint[] = [
-  { bg: '#3323cc', fg: '#e2dfff' },
-  { bg: '#00504a', fg: '#72f7ea' },
-  { bg: '#763300', fg: '#ffdbca' },
-  { bg: '#8f0042', fg: '#ffd9e0' },
-  { bg: '#0039b5', fg: '#dce1ff' },
-  { bg: '#5b00c5', fg: '#ebddff' },
+  { bg: '#9d2514', fg: '#ffdad4' },
+  { bg: '#38594d', fg: '#c6ebdb' },
+  { bg: '#564e6b', fg: '#e8ddff' },
+  { bg: '#684f00', fg: '#ffdf97' },
+  { bg: '#7e3e55', fg: '#ffd9e3' },
+  { bg: '#175877', fg: '#c6e7ff' },
 ]
 
 export function tintFor(seed: string, tints: readonly Tint[]): Tint {

@@ -71,7 +71,7 @@ const useStyles = makeStyles((theme) => ({
   },
   card: {
     backgroundColor: theme.colors.surfaceContainerHigh,
-    borderRadius: theme.shape.lg,
+    borderRadius: theme.shape.md,
     overflow: 'hidden',
   },
   row: {

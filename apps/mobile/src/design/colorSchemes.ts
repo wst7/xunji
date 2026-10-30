@@ -1,27 +1,32 @@
 /**
- * Material Design 3 color roles.
+ * Material Design 3 color roles — 集邮册与销戳 (stamp album & postmark).
  *
- * Generated from seed #4F46E5 with @material/material-color-utilities (0.3.0)
- * plus the MD3 surface-container tones. The light primary is pinned to the
- * brand indigo so the seed and the accent stay identical.
+ * Generated from the world's seeds with @material/material-color-utilities
+ * (0.3.0): vermilion #c2402c (pressed to #b53823 as light primary so
+ * vermilion text clears 4.5:1 on every surface), ink violet #2e2742,
+ * album green #35564a; neutral ramps keep the paper #f3ede0 / cloth #1c2422
+ * hues at low chroma. surfaceContainerLowest is pinned warm (#fffdf7):
+ * the HCT solver drifts bluish at tone 99, which reads dirty on paper.
  *
- * Regenerate rather than hand-editing individual tones: every role in a scheme
- * is tonally paired with its `on-` role, and changing one breaks contrast.
+ * Every on-/container pair the UI renders was checked against WCAG 4.5:1
+ * (3:1 for outlines and large icons) before committing. Regenerate rather
+ * than hand-editing individual tones: each role is tonally paired with its
+ * `on-` role, and changing one breaks contrast.
  */
 
 export const lightRoles = {
-  primary: '#4F46E5',
+  primary: '#b53823',
   onPrimary: '#ffffff',
-  primaryContainer: '#e2dfff',
-  onPrimaryContainer: '#0f0069',
-  secondary: '#5e5c71',
+  primaryContainer: '#ffdad4',
+  onPrimaryContainer: '#400200',
+  secondary: '#625a78',
   onSecondary: '#ffffff',
-  secondaryContainer: '#e3e0f9',
-  onSecondaryContainer: '#1a1a2c',
-  tertiary: '#7a5368',
+  secondaryContainer: '#e8ddff',
+  onSecondaryContainer: '#1e1731',
+  tertiary: '#446559',
   onTertiary: '#ffffff',
-  tertiaryContainer: '#ffd8ea',
-  onTertiaryContainer: '#2f1123',
+  tertiaryContainer: '#c6ebdb',
+  onTertiaryContainer: '#002117',
   error: '#ba1a1a',
   onError: '#ffffff',
   errorContainer: '#ffdad6',
@@ -34,45 +39,43 @@ export const lightRoles = {
   onWarning: '#ffffff',
   warningContainer: '#ffdbca',
   onWarningContainer: '#331200',
-  background: '#fcf8fd',
-  onBackground: '#1c1b1f',
-  surface: '#fcf8fd',
-  onSurface: '#1c1b1f',
-  surfaceVariant: '#e4e1ec',
-  onSurfaceVariant: '#47464f',
-  surfaceDim: '#dcd9dd',
-  surfaceBright: '#fcf8fd',
-  surfaceContainerLowest: '#ffffff',
-  surfaceContainerLow: '#f6f2f7',
-  surfaceContainer: '#f0edf1',
-  surfaceContainerHigh: '#ebe7ec',
-  surfaceContainerHighest: '#e5e1e6',
-  surfaceTint: '#4F46E5',
-  outline: '#787680',
-  outlineVariant: '#c8c5d0',
+  background: '#f3ede0',
+  onBackground: '#2e2742',
+  surface: '#f3ede0',
+  onSurface: '#2e2742',
+  surfaceVariant: '#e7e2d9',
+  onSurfaceVariant: '#55524b',
+  surfaceDim: '#ded9d1',
+  surfaceBright: '#fbf6ed',
+  surfaceContainerLowest: '#fffdf7',
+  surfaceContainerLow: '#fbf6ed',
+  surfaceContainer: '#f4efe5',
+  surfaceContainerHigh: '#ede8de',
+  surfaceContainerHighest: '#e7e2d9',
+  surfaceTint: '#b53823',
+  outline: '#827e77',
+  outlineVariant: '#cbc6bd',
   shadow: '#000000',
   scrim: '#000000',
-  inverseSurface: '#313034',
-  inverseOnSurface: '#f3eff4',
-  inversePrimary: '#c3c0ff',
+  inverseSurface: '#3f3753',
+  inverseOnSurface: '#f6f0e7',
+  inversePrimary: '#ffb4a6',
 } as const
-
-export type ColorRole = keyof typeof lightRoles
 
 /** Same keys as the light scheme, checked at compile time. */
 export const darkRoles: Record<ColorRole, string> = {
-  primary: '#c3c0ff',
-  onPrimary: '#1d00a5',
-  primaryContainer: '#3323cc',
-  onPrimaryContainer: '#e2dfff',
-  secondary: '#c7c4dd',
-  onSecondary: '#2f2e42',
-  secondaryContainer: '#464559',
-  onSecondaryContainer: '#e3e0f9',
-  tertiary: '#eab9d1',
-  onTertiary: '#472639',
-  tertiaryContainer: '#603c50',
-  onTertiaryContainer: '#ffd8ea',
+  primary: '#ff8f73',
+  onPrimary: '#670600',
+  primaryContainer: '#8c1809',
+  onPrimaryContainer: '#ffdad4',
+  secondary: '#ccc1e4',
+  onSecondary: '#332c48',
+  secondaryContainer: '#4a425f',
+  onSecondaryContainer: '#e8ddff',
+  tertiary: '#aacebf',
+  onTertiary: '#15362b',
+  tertiaryContainer: '#2c4d41',
+  onTertiaryContainer: '#c6ebdb',
   error: '#ffb4ab',
   onError: '#690005',
   errorContainer: '#93000a',
@@ -85,25 +88,27 @@ export const darkRoles: Record<ColorRole, string> = {
   onWarning: '#532200',
   warningContainer: '#763300',
   onWarningContainer: '#ffdbca',
-  background: '#131316',
-  onBackground: '#e5e1e6',
-  surface: '#131316',
-  onSurface: '#e5e1e6',
-  surfaceVariant: '#47464f',
-  onSurfaceVariant: '#c8c5d0',
-  surfaceDim: '#131316',
-  surfaceBright: '#3a393c',
-  surfaceContainerLowest: '#0e0e11',
-  surfaceContainerLow: '#1c1b1f',
-  surfaceContainer: '#201f23',
-  surfaceContainerHigh: '#2a292d',
-  surfaceContainerHighest: '#353438',
-  surfaceTint: '#c3c0ff',
-  outline: '#928f9a',
-  outlineVariant: '#47464f',
+  background: '#1c2422',
+  onBackground: '#eae5d6',
+  surface: '#1c2422',
+  onSurface: '#eae5d6',
+  surfaceVariant: '#434846',
+  onSurfaceVariant: '#c8cdcb',
+  surfaceDim: '#1e2321',
+  surfaceBright: '#434846',
+  surfaceContainerLowest: '#181d1b',
+  surfaceContainerLow: '#242927',
+  surfaceContainer: '#2a2f2e',
+  surfaceContainerHigh: '#333836',
+  surfaceContainerHighest: '#3c413f',
+  surfaceTint: '#ff8f73',
+  outline: '#8d9290',
+  outlineVariant: '#434846',
   shadow: '#000000',
   scrim: '#000000',
-  inverseSurface: '#e5e1e6',
-  inverseOnSurface: '#313034',
-  inversePrimary: '#4F46E5',
+  inverseSurface: '#ede8de',
+  inverseOnSurface: '#3f3753',
+  inversePrimary: '#ad311f',
 }
+
+export type ColorRole = keyof typeof lightRoles

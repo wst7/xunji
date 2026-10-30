@@ -5,7 +5,7 @@ const isProduction = process.env.APP_VARIANT === 'production'
 
 // 版本号跟发布 tag 走：CI 打 v* 标签时注入 XUNJI_APP_VERSION（v0.3.1 → 0.3.1）。
 // 本地构建回退到这里的默认值。Android 的 versionCode 由版本号推导，升级安装不会退版。
-const rawVersion: string = process.env.XUNJI_APP_VERSION ?? '0.4.0'
+const rawVersion: string = process.env.XUNJI_APP_VERSION ?? '0.5.0'
 const appVersion = rawVersion.replace(/^v/, '')
 const [versionMajor = 0, versionMinor = 0, versionPatch = 0] = appVersion
   .split('.')
@@ -13,8 +13,9 @@ const [versionMajor = 0, versionMinor = 0, versionPatch = 0] = appVersion
 const versionCode = versionMajor * 10000 + versionMinor * 100 + versionPatch
 
 // 与 src/design/colorSchemes.ts 的 surface 保持一致，避免原生动画/启动时闪白或闪黑。
-const LIGHT_SURFACE = '#FCF8FD'
-const DARK_SURFACE = '#131316'
+// 纸面（集邮册世界）：light 胶面纸 / dark 深绿集邮册布。
+const LIGHT_SURFACE = '#F3EDE0'
+const DARK_SURFACE = '#1C2422'
 
 const config: ExpoConfig = {
   name: '寻迹',
@@ -46,7 +47,7 @@ const config: ExpoConfig = {
     versionCode,
     predictiveBackGestureEnabled: false,
     adaptiveIcon: {
-      backgroundColor: '#F4F5F8',
+      backgroundColor: '#F3EDE0',
       foregroundImage: './assets/android-icon-foreground.png',
       backgroundImage: './assets/android-icon-background.png',
       monochromeImage: './assets/android-icon-monochrome.png',
